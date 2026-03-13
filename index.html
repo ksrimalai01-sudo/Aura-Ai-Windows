@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura AI | Professional Workspace</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts for Premium Look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-title">✨ Aura AI</div>
+        <div class="title-bar-drag-area"></div>
+        <div class="title-bar-controls">
+            <button id="btn-min-win" title="Minimize">─</button>
+            <button id="btn-max-win" title="Maximize">□</button>
+            <button id="btn-close-win" title="Close">✕</button>
+        </div>
+    </div>
+
+    <!-- Sidebar: モード切り替え (Mode kirikae) - แถบเมนูข้างเพื่อสลับโหมด -->
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-icon">✨</span>
+            <span class="logo-text">Aura AI</span>
+        </div>
+        
+        <div class="mode-switcher">
+            <h3 class="sidebar-section-title">Workspace</h3>
+            <button id="btn-general" class="active" data-mode="general">
+                <span class="icon">🏠</span> 
+                <span class="label">General</span>
+            </button>
+            
+            <h3 class="sidebar-section-title" style="margin-top: 15px;">🔌 Add-ons</h3>
+            <button id="btn-ecommerce" data-mode="ecommerce">
+                <span class="icon">🛒</span> 
+                <span class="label">E-commerce Pro</span>
+            </button>
+            <button id="btn-japanese" data-mode="japanese">
+                <span class="icon">⛩️</span> 
+                <span class="label">Japanese Tutor</span>
+            </button>
+            <button id="btn-open-store" class="add-plugin-btn">
+                <span class="icon">➕</span>
+                <span class="label">Get More...</span>
+            </button>
+        </div>
+
+        <!-- Prompt Library / プロンプト集 (Prompt-shuu) - คลังคำสั่ง -->
+        <div class="prompt-library">
+            <button id="btn-screenshot" class="special-btn">📸 Screenshot & Analyze</button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 title="Right-click any prompt to Edit/Delete">📖 Prompt Library</h3>
+                <div>
+                    <button id="btn-open-community" title="Community Prompts" style="background:transparent; border:none; color:var(--text-main); font-size:1.1rem; cursor:pointer; margin-right: 5px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">🌍</button>
+                    <button id="btn-add-prompt" title="Add Custom Prompt" style="background:transparent; border:none; color:var(--text-main); font-size:1.2rem; cursor:pointer;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">⊕</button>
+                </div>
+            </div>
+            <div id="prompt-list" class="prompt-list">
+                <!-- Content injected by renderer.js -->
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="window-controls">
+                <label>
+                    <input type="checkbox" id="chk-on-top"> 📌 Pin
+                </label>
+                <input type="range" id="rng-opacity" min="0.3" max="1" step="0.1" value="1" title="Opacity">
+            </div>
+            <button id="btn-theme-toggle">🌙 Dark Mode</button>
+            <button id="btn-settings">⚙️ Settings</button>
+            <button id="btn-logout" style="color:#ef4444;">🚪 Sign Out</button>
+        </div>
+    </nav>
+
+    <!-- Main Content: AI Webview Container -->
+    <main class="content">
+        <!-- Smart Hub: Top Bar for Quick Commands -->
+        <header class="smart-hub">
+            <div class="input-container">
+                <button id="btn-toggle-sidebar" class="hub-select" style="padding: 0 15px; font-weight: bold;" title="Toggle Sidebar (Ctrl+G)">☰</button>
+                <select id="hub-ai-selector" class="hub-select">
+                    <option value="gemini">Gemini</option>
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="claude">Claude</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+                <input type="text" id="hub-input" placeholder="Enter text to analyze... (Ctrl+H to send)">
+                <button id="btn-send-raw">🚀 Send</button>
+                <button id="btn-broadcast" title="Send to ALL visible AIs" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢 Broadcast</button>
+            </div>
+            <div id="quick-chips" class="quick-chips">
+                <!-- Chips injected by renderer.js -->
+            </div>
+            
+            <div class="ai-toggles">
+                <span class="toggles-label">Views:</span>
+                <button class="ai-toggle active" data-provider="gemini">Gemini</button>
+                <button class="ai-toggle" data-provider="chatgpt">ChatGPT</button>
+                <button class="ai-toggle" data-provider="claude">Claude</button>
+                <button class="ai-toggle" data-provider="deepseek">DeepSeek</button>
+                <button class="ai-toggle" data-provider="leonardo">Leonardo AI</button>
+                <button class="ai-toggle hidden" id="toggle-custom" data-provider="custom">Custom AI</button>
+            </div>
+        </header>
+
+        <div class="webview-stack" id="webview-container">
+            <!-- Webviews -->
+            <div class="view-panel" id="panel-gemini" data-id="gemini">
+                <div class="view-header">
+                    <span class="view-title">Gemini</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-chatgpt" data-id="chatgpt">
+                <div class="view-header">
+                    <span class="view-title">ChatGPT</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-chatgpt" src="https://chatgpt.com" partition="persist:chatgpt"></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-claude" data-id="claude">
+                <div class="view-header">
+                    <span class="view-title">Claude</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-claude" src="https://claude.ai" partition="persist:claude"></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-deepseek" data-id="deepseek">
+                <div class="view-header">
+                    <span class="view-title">DeepSeek</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-deepseek" src="https://chat.deepseek.com" partition="persist:deepseek"></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-leonardo" data-id="leonardo">
+                <div class="view-header">
+                    <span class="view-title">Leonardo AI</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-leonardo" src="https://leonardo.ai" partition="persist:leonardo"></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-custom" data-id="custom">
+                <div class="view-header">
+                    <span id="custom-ai-title" class="view-title">Custom AI</span>
+                    <div class="view-actions">
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-custom" src="about:blank" partition="persist:custom"></webview>
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Overlay / 設定 (Settei) - การตั้งค่า -->
+    <div id="settings-overlay" class="overlay hidden">
+        <div class="settings-modal">
+            <header>
+                <h2>⚙️ Aura AI Settings</h2>
+                <button id="btn-close-settings">✕</button>
+            </header>
+            
+            <div class="settings-content">
+                <!-- Profile Section -->
+                <section>
+                    <h3>👤 Profile</h3>
+                    <div class="setting-item">
+                        <label>Display Username</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="set-username" placeholder="Choose a username..." style="flex-grow: 1;">
+                            <button id="btn-update-username" style="background: var(--accent); border: none; padding: 5px 10px; border-radius: 5px; color: white; cursor: pointer; font-size: 0.8rem;">Update</button>
+                        </div>
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*Used for login (Email or Username).</p>
+                    </div>
+                    <div class="setting-item" style="margin-top: 15px;">
+                        <label>Community Alias (Optional)</label>
+                        <input type="text" id="set-alias" placeholder="e.g. Secret Master, Anonymous..." style="width: 100%;">
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*This name will be shown on your shared prompts and add-ons.</p>
+                    </div>
+                </section>
+
+                <!-- AI Providers -->
+                <section>
+                    <h3>🤖 AI Providers</h3>
+                    <div class="ai-grid">
+                        <label class="ai-item"><input type="radio" name="ai-provider" value="gemini" checked> Gemini</label>
+                        <label class="ai-item"><input type="radio" name="ai-provider" value="chatgpt"> ChatGPT</label>
+                        <label class="ai-item"><input type="radio" name="ai-provider" value="claude"> Claude</label>
+                        <label class="ai-item"><input type="radio" name="ai-provider" value="deepseek"> DeepSeek</label>
+                    </div>
+                </section>
+
+                <!-- Prompt Logic -->
+                <section>
+                    <h3>📝 Prompt Tweaks</h3>
+                    <div class="setting-item">
+                        <label><input type="checkbox" id="set-use-prefix"> Use Prefix</label>
+                        <input type="text" id="set-prefix-val" placeholder="I am studying {}...">
+                    </div>
+                    <div class="setting-item">
+                        <label><input type="checkbox" id="set-use-suffix" checked> Use Translation Suffix</label>
+                        <input type="text" id="set-suffix-val" placeholder="Please explain in Thai.">
+                    </div>
+                </section>
+
+                <!-- Automation -->
+                <section>
+                    <h3>⚡ Automation</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="set-auto-send"> Auto-click Search/Send</label>
+                        <label><input type="checkbox" id="set-auto-read"> Auto-read aloud (for ChatGPT only)</label>
+                    </div>
+                </section>
+
+                <!-- System -->
+                <section>
+                    <h3>📂 System</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="set-show-ecommerce"> Show E-commerce Pro Add-on</label>
+                        <label><input type="checkbox" id="set-show-japanese"> Show Japanese Tutor Add-on</label>
+                    </div>
+                </section>
+
+                <!-- Custom AI -->
+                <section>
+                    <h3>✨ Custom AI View</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label><input type="checkbox" id="set-show-custom"> Enable Custom AI View</label>
+                        <div class="setting-item">
+                            <label>Name</label>
+                            <input type="text" id="set-custom-name" placeholder="e.g. Perplexity">
+                        </div>
+                        <div class="setting-item">
+                            <label>URL</label>
+                            <input type="text" id="set-custom-url" placeholder="https://example.com">
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <footer>
+                <button id="btn-save-settings">💾 Save Changes</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Overlay: Add/Edit Prompt -->
+    <div id="prompt-overlay" class="overlay hidden" style="z-index: 10001;">
+        <div class="settings-modal" style="max-width: 400px;">
+            <header>
+                <h2 id="prompt-modal-title">✨ Add New Prompt</h2>
+                <button id="btn-close-prompt">✕</button>
+            </header>
+            
+            <div class="settings-content">
+                <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 5px;">
+                    <label>Label</label>
+                    <input type="text" id="prompt-label" placeholder="e.g. 📝 My Prompt">
+                </div>
+                <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 5px; margin-top: 15px;">
+                    <label>Content Text</label>
+                    <textarea id="prompt-text" rows="4" placeholder="e.g. Please analyze this text:\n[YOUR TOPIC]" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 8px; border-radius: 5px; color: white; resize: vertical; width: 100%; box-sizing: border-box;"></textarea>
+                    <small style="color:rgba(255,255,255,0.5);">Tip: Replaceable keywords like [YOUR TOPIC] work automatically.</small>
+                </div>
+            </div>
+            
+            <footer style="display: flex; justify-content: space-between;">
+                <button id="btn-delete-prompt" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); display: none;">🗑️ Delete</button>
+                <div style="margin-left: auto; display: flex; gap: 10px;">
+                    <button id="btn-share-prompt" style="background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.5); display: none;">🌍 Share to World</button>
+                    <button id="btn-save-prompt">💾 Save</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Store Overlay: Add-on Store -->
+    <div id="store-overlay" class="overlay flex-center hidden" style="z-index: 10002;">
+        <div class="settings-modal" style="width: 500px;">
+            <header>
+                <h2>🛒 Add-on Store</h2>
+                <button id="btn-close-store" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+            </header>
+            
+            <div class="settings-content" style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <p style="margin: 0; color:rgba(255,255,255,0.7);">Expand your AI capabilities with add-ons.</p>
+                    <button id="btn-open-create-addon" style="background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">✨ Create Add-on</button>
+                </div>
+                
+                <h4 style="margin: 0 0 10px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">Official Add-ons</h4>
+                <!-- Store Item 1 -->
+                <div class="store-item" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 5px 0;">🛒 E-commerce Pro</h3>
+                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with Leonardo AI and prompts for product descriptions.</p>
+                    </div>
+                    <button class="store-btn-install" data-addon="ecommerce" style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
+                </div>
+
+                <!-- Store Item 2 -->
+                <div class="store-item" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 5px 0;">⛩️ Japanese Tutor</h3>
+                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with Claude and prompts for language learning.</p>
+                    </div>
+                    <button class="store-btn-install" data-addon="japanese" style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">🌍 Community Add-ons</h4>
+                    <div id="community-addon-list" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+                            Loading community add-ons...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer style="display: flex; justify-content: flex-end;">
+                <button id="btn-done-store" style="background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Done</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Community Prompts Overlay -->
+    <div id="community-overlay" class="overlay flex-center hidden" style="z-index: 10002;">
+        <div class="settings-modal" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <header>
+                <h2>🌍 Community Prompts</h2>
+                <button id="btn-close-community" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+            </header>
+            
+            <div class="settings-content" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <p style="color:rgba(255,255,255,0.7); margin: 0;">Discover and add prompts shared by other Aura AI users!</p>
+                    <button id="btn-refresh-community" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">🔄 Refresh</button>
+                </div>
+                
+                <div id="community-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Loading prompts...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Auth Overlay -->
+    <div id="auth-overlay" class="overlay flex-center">
+        <div class="auth-modal">
+            <h2 id="auth-title">Welcome to Aura AI</h2>
+            <p class="auth-subtitle">Log in to unleash your personalized workspace.</p>
+            
+            <div id="auth-error" class="auth-error hidden"></div>
+
+            <form id="auth-form">
+                <div id="username-group" class="auth-input-group hidden">
+                    <label>Username (Optional for Sign-up)</label>
+                    <input type="text" id="auth-username" placeholder="pro_thinker">
+                </div>
+                <div class="auth-input-group">
+                    <label id="email-label">Email or Username</label>
+                    <input type="text" id="auth-email" placeholder="you@example.com or username" required>
+                </div>
+                <div class="auth-input-group">
+                    <label>Password</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                </div>
+                
+                <div style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
+                    <button type="button" id="btn-forgot-password" style="background:none; border:none; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; padding: 5px;">Forgot Password?</button>
+                </div>
+                
+                <button type="submit" id="btn-auth-submit" class="auth-btn-primary">Sign In</button>
+            </form>
+
+            <div id="verify-email-section" class="hidden" style="margin-top: 20px; text-align: center; border: 1px dashed var(--accent); padding: 15px; border-radius: 8px;">
+                <p style="font-size: 0.9rem; color: var(--accent); margin-bottom: 10px;">📧 Please verify your email!</p>
+                <p style="font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-bottom: 15px;">We've sent a link to your email. Please check your inbox (and spam folder).</p>
+                <button id="btn-resend-verification" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Resend Email</button>
+            </div>
+
+            <div id="auth-google-section" class="hidden">
+                <div class="auth-divider"><span>OR</span></div>
+                <button id="btn-auth-google" class="auth-btn-google">
+                    <svg viewBox="0 0 48 48" class="google-icon"><title>Google Logo</title><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Sign in with Google
+                </button>
+            </div>
+
+            <p class="auth-toggle-text">
+                <span id="auth-toggle-message">Don't have an account?</span> 
+                <a href="#" id="auth-toggle-link">Sign Up</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Create Add-on Overlay -->
+    <div id="create-addon-overlay" class="overlay flex-center hidden" style="z-index: 10005;">
+        <div class="settings-modal" style="width: 450px;">
+            <header>
+                <h2>✨ Create Community Add-on</h2>
+                <button id="btn-close-create-addon" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+            </header>
+            <div class="settings-content" style="padding: 20px;">
+                <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 20px;">
+                    This will package your <b>current visible panels</b> and <b>all current prompts</b> into a shareable add-on.
+                </p>
+                
+                <div class="auth-input-group">
+                    <label>Add-on Name</label>
+                    <input type="text" id="addon-name" placeholder="e.g. Content Writer Pro">
+                </div>
+                <div class="auth-input-group">
+                    <label>Emoji Icon</label>
+                    <input type="text" id="addon-emoji" placeholder="e.g. ✍️" maxlength="2">
+                </div>
+                <div class="auth-input-group">
+                    <label>Description</label>
+                    <textarea id="addon-desc" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; padding: 10px; height: 80px; resize: none;" placeholder="What does this add-on do?"></textarea>
+                </div>
+            </div>
+            <footer style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btn-publish-addon" class="auth-btn-primary">🌍 Publish to Store</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="module" src="renderer.js"></script>
+</body>
+</html>

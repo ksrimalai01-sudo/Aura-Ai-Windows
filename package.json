@@ -1,0 +1,50 @@
+{
+  "name": "aura-ai",
+  "version": "1.0.0",
+  "description": "Professional AI Workspace for E-commerce and Language Learning",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "firebase": "^12.10.0"
+  },
+  "build": {
+    "appId": "com.aura.ai",
+    "productName": "Aura AI",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ksrimalai01-sudo",
+        "repo": "Aura-Ai-Windows"
+      }
+    ]
+  }
+}
