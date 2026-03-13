@@ -268,6 +268,29 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Keyboard Shortcuts Reference -->
+                <section>
+                    <h3>⌨️ Keyboard Shortcuts</h3>
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid var(--glass-border); font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: rgba(255,255,255,0.6);">Send Prompt (Active)</span>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl + H</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: rgba(255,255,255,0.6);">Broadcast (All)</span>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl+Shift+H</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: rgba(255,255,255,0.6);">Toggle Sidebar</span>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl + G</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: rgba(255,255,255,0.6);">Close Modals</span>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Esc</kbd>
+                        </div>
+                    </div>
+                </section>
             </div>
             
             <footer>
@@ -340,7 +363,10 @@
                 </div>
 
                 <div style="margin-top: 30px;">
-                    <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">🌍 Community Add-ons</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">🌍 Community Add-ons</h4>
+                        <input type="text" id="search-community-addons" placeholder="🔍 Search add-ons..." style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; border-radius: 5px; color: white; font-size: 0.75rem; width: 150px;">
+                    </div>
                     <div id="community-addon-list" style="display: flex; flex-direction: column; gap: 15px;">
                         <div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
                             Loading community add-ons...
@@ -364,12 +390,12 @@
             </header>
             
             <div class="settings-content" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                    <p style="color:rgba(255,255,255,0.7); margin: 0;">Discover and add prompts shared by other Aura AI users!</p>
-                    <button id="btn-refresh-community" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">🔄 Refresh</button>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                    <input type="text" id="search-community-prompts" placeholder="🔍 Search prompts..." style="flex-grow: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; color: white; font-size: 0.9rem;">
+                    <button id="btn-refresh-community" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;">🔄 Refresh</button>
                 </div>
                 
-                <div id="community-list" style="display: flex; flex-direction: column; gap: 15px;">
+                <div id="community-list" style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto;">
                     <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Loading prompts...</div>
                 </div>
             </div>

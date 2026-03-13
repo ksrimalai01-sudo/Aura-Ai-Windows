@@ -1026,6 +1026,7 @@ if (btnSharePrompt) {
                 text: text,
                 mode: settings.currentMode,
                 author: settings.communityAlias || settings.username || currentUser.email || "Anonymous",
+                ownerId: currentUser.uid,
                 timestamp: new Date().toISOString()
             });
             showToast("🌍 Prompt Shared to Community!");
@@ -1046,19 +1047,26 @@ const btnRefreshCommunity = document.getElementById('btn-refresh-community');
 const communityList = document.getElementById('community-list');
 
 async function renderCommunityPrompts() {
-    communityList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Fetching from Cloud...</div>';
+    const list = document.getElementById('community-list');
+    const searchVal = document.getElementById('search-community-prompts').value.toLowerCase();
+    
+    list.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Fetching from Cloud...</div>';
     try {
-        const q = query(collection(db, "community_prompts"), orderBy("timestamp", "desc"), limit(20));
+        const q = query(collection(db, "community_prompts"), orderBy("timestamp", "desc"), limit(50));
         const querySnapshot = await getDocs(q);
         
-        communityList.innerHTML = '';
-        if (querySnapshot.empty) {
-            communityList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">No prompts found. Be the first to share one!</div>';
-            return;
-        }
-
+        list.innerHTML = '';
+        let count = 0;
+        
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            const textMatch = data.text.toLowerCase().includes(searchVal);
+            const labelMatch = data.label.toLowerCase().includes(searchVal);
+            const authorMatch = (data.author || '').toLowerCase().includes(searchVal);
+
+            if (searchVal && !textMatch && !labelMatch && !authorMatch) return;
+            count++;
+
             const div = document.createElement('div');
             div.style.cssText = "background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start;";
             
@@ -1089,8 +1097,9 @@ async function renderCommunityPrompts() {
 
             div.appendChild(btnAdd);
 
-            // Allow Author to Unpublish
-            if (currentUser && data.author === (currentUser.email || currentUser.uid)) {
+            // Allow Owner to Unpublish (Check by ownerId or fallback to email)
+            const isOwner = currentUser && (data.ownerId === currentUser.uid || data.author === (currentUser.email || currentUser.uid));
+            if (isOwner) {
                 const btnUnpublish = document.createElement('button');
                 btnUnpublish.innerText = "🗑️ Unpublish";
                 btnUnpublish.style.cssText = "background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; margin-top: 5px;";
@@ -1108,8 +1117,12 @@ async function renderCommunityPrompts() {
                 div.querySelector('div').appendChild(btnUnpublish);
             }
 
-            communityList.appendChild(div);
+            list.appendChild(div);
         });
+
+        if (count === 0) {
+            list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">${searchVal ? 'No results found for your search.' : 'No prompts found.'}</div>`;
+        }
     } catch (error) {
         console.error("Error loading community prompts", error);
         communityList.innerHTML = '<div style="text-align: center; color: #fca5a5; padding: 20px;">Failed to load prompts.</div>';
@@ -1212,6 +1225,7 @@ if (btnPublishAddon) btnPublishAddon.onclick = async () => {
             emoji,
             description: desc,
             author: settings.communityAlias || settings.username || currentUser.email || currentUser.uid,
+            ownerId: currentUser.uid,
             timestamp: new Date().toISOString(),
             layouts: settings.layouts[settings.currentMode] || [],
             prompts: getActivePrompts(settings.currentMode)
@@ -1229,20 +1243,24 @@ if (btnPublishAddon) btnPublishAddon.onclick = async () => {
 
 async function renderCommunityAddons() {
     if (!communityAddonList) return;
+    const searchVal = document.getElementById('search-community-addons').value.toLowerCase();
+    
     communityAddonList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px;">Loading community add-ons...</div>';
 
     try {
         const q = query(collection(db, "community_addons"), orderBy("timestamp", "desc"));
         const snap = await getDocs(q);
         communityAddonList.innerHTML = '';
-
-        if (snap.empty) {
-            communityAddonList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px;">No community add-ons yet. Be the first!</div>';
-            return;
-        }
+        let count = 0;
 
         snap.forEach(docSnap => {
             const data = docSnap.data();
+            const nameMatch = data.name.toLowerCase().includes(searchVal);
+            const descMatch = (data.description || '').toLowerCase().includes(searchVal);
+            
+            if (searchVal && !nameMatch && !descMatch) return;
+            count++;
+
             const div = document.createElement('div');
             div.className = "store-item";
             div.style.cssText = "background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
@@ -1271,7 +1289,8 @@ async function renderCommunityAddons() {
             };
 
             // Owner Unpublish
-            if (currentUser && data.author === (currentUser.email || currentUser.uid)) {
+            const isOwner = currentUser && (data.ownerId === currentUser.uid || data.author === (currentUser.email || currentUser.uid));
+            if (isOwner) {
                 const btnDel = document.createElement('button');
                 btnDel.innerText = "🗑️";
                 btnDel.style.cssText = "background: transparent; border: none; color: #ef4444; margin-right: 10px; cursor: pointer;";
@@ -1289,6 +1308,10 @@ async function renderCommunityAddons() {
             div.appendChild(btnInstall);
             communityAddonList.appendChild(div);
         });
+
+        if (count === 0) {
+            communityAddonList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px;">No results found.</div>';
+        }
     } catch (e) {
         console.error(e);
         communityAddonList.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error loading add-ons.</div>';
@@ -1381,5 +1404,22 @@ if (window.electronAPI) {
             }
         }
     });
+}
+
+// Search Listeners
+const searchPromptsInput = document.getElementById('search-community-prompts');
+if (searchPromptsInput) {
+    searchPromptsInput.oninput = () => {
+        // Debounce search
+        clearTimeout(window.searchTimeout);
+        window.searchTimeout = setTimeout(renderCommunityPrompts, 300);
+    };
+}
+
+const searchAddonsInput = document.getElementById('search-community-addons');
+if (searchAddonsInput) {
+    searchAddonsInput.oninput = () => {
+        renderCommunityAddons();
+    };
 }
 // Note: Initial load is now handled by onAuthStateChanged!
