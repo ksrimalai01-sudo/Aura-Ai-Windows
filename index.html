@@ -47,6 +47,18 @@
                 <span class="icon">➕</span>
                 <span class="label">Get More...</span>
             </button>
+
+            <div id="pro-utilities" style="display: none; flex-direction: column; gap: 10px; margin-top: 15px;">
+                <h3 class="sidebar-section-title">🌟 Pro Utilities</h3>
+                <button id="btn-ai-debate">
+                    <span class="icon">⚔️</span> 
+                    <span class="label">AI Debate</span>
+                </button>
+                <button id="btn-workflow-chain">
+                    <span class="icon">🔗</span> 
+                    <span class="label">Workflow Chain</span>
+                </button>
+            </div>
         </div>
 
         <!-- Prompt Library / プロンプト集 (Prompt-shuu) - คลังคำสั่ง -->
@@ -64,16 +76,19 @@
             </div>
         </div>
 
-        <div class="sidebar-footer">
-            <div class="window-controls">
-                <label>
-                    <input type="checkbox" id="chk-on-top"> 📌 Pin
-                </label>
-                <input type="range" id="rng-opacity" min="0.3" max="1" step="0.1" value="1" title="Opacity">
+        <div class="sidebar-footer" style="padding: 10px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
+            <div class="footer-icons" style="display: flex; justify-content: space-around; align-items: center;">
+                <button id="btn-theme-toggle" class="icon-only-btn" title="Toggle Theme">🌙</button>
+                <button id="btn-settings" class="icon-only-btn" title="Settings">⚙️</button>
+                <button id="btn-logout" class="icon-only-btn" title="Sign Out" style="color: #ef4444;">🚪</button>
             </div>
-            <button id="btn-theme-toggle">🌙 Dark Mode</button>
-            <button id="btn-settings">⚙️ Settings</button>
-            <button id="btn-logout" style="color:#ef4444;">🚪 Sign Out</button>
+            
+            <div class="window-controls" style="font-size: 0.75rem; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 6px;">
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="chk-on-top" style="scale: 0.8;"> 📌
+                </label>
+                <input type="range" id="rng-opacity" min="0.3" max="1" step="0.1" value="1" style="flex: 1; height: 4px;">
+            </div>
         </div>
     </nav>
 
@@ -88,23 +103,30 @@
                     <option value="chatgpt">ChatGPT</option>
                     <option value="claude">Claude</option>
                     <option value="deepseek">DeepSeek</option>
+                    <option value="api">🌟 Aura Pro</option>
                 </select>
-                <input type="text" id="hub-input" placeholder="Enter text to analyze... (Ctrl+H to send)">
-                <button id="btn-send-raw">🚀 Send</button>
-                <button id="btn-broadcast" title="Send to ALL visible AIs" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢 Broadcast</button>
+                <input type="text" id="hub-input" placeholder="Type prompt here... (Ctrl+H to send)" title="Shortcut: Ctrl+H (Send to single), Ctrl+Shift+H (Broadcast)">
+                <button id="btn-send-raw" title="Send (Ctrl+H)">🚀 Send</button>
+                <button id="btn-broadcast" title="Broadcast to ALL (Ctrl+Shift+H)" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢 Broadcast</button>
             </div>
             <div id="quick-chips" class="quick-chips">
                 <!-- Chips injected by renderer.js -->
             </div>
             
-            <div class="ai-toggles">
+            <div class="ai-toggles" id="ai-toggles-container">
                 <span class="toggles-label">Views:</span>
-                <button class="ai-toggle active" data-provider="gemini">Gemini</button>
-                <button class="ai-toggle" data-provider="chatgpt">ChatGPT</button>
-                <button class="ai-toggle" data-provider="claude">Claude</button>
-                <button class="ai-toggle" data-provider="deepseek">DeepSeek</button>
-                <button class="ai-toggle" data-provider="leonardo">Leonardo AI</button>
-                <button class="ai-toggle hidden" id="toggle-custom" data-provider="custom">Custom AI</button>
+                <div id="dynamic-toggles" style="display:flex; gap:8px;">
+                    <!-- Toggles injected dynamically by renderer.js -->
+                </div>
+                
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <span class="toggles-label">Layout:</span>
+                    <select id="layout-style" class="hub-select" style="padding: 2px 8px; font-size: 0.8rem;">
+                        <option value="scroll">↔️ Scroll (Default)</option>
+                        <option value="split">🌗 Split Evenly</option>
+                        <option value="grid">🔲 Grid View</option>
+                    </select>
+                </div>
             </div>
         </header>
 
@@ -112,8 +134,15 @@
             <!-- Webviews -->
             <div class="view-panel" id="panel-gemini" data-id="gemini">
                 <div class="view-header">
-                    <span class="view-title">Gemini</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Gemini</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -124,8 +153,15 @@
 
             <div class="view-panel hidden" id="panel-chatgpt" data-id="chatgpt">
                 <div class="view-header">
-                    <span class="view-title">ChatGPT</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">ChatGPT</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -136,8 +172,15 @@
 
             <div class="view-panel hidden" id="panel-claude" data-id="claude">
                 <div class="view-header">
-                    <span class="view-title">Claude</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Claude</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -148,8 +191,15 @@
 
             <div class="view-panel hidden" id="panel-deepseek" data-id="deepseek">
                 <div class="view-header">
-                    <span class="view-title">DeepSeek</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">DeepSeek</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -160,8 +210,15 @@
 
             <div class="view-panel hidden" id="panel-leonardo" data-id="leonardo">
                 <div class="view-header">
-                    <span class="view-title">Leonardo AI</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Leonardo AI</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -170,10 +227,54 @@
                 <webview id="wv-leonardo" src="https://leonardo.ai" partition="persist:leonardo"></webview>
             </div>
 
+            <div class="view-panel hidden" id="panel-api" data-id="api">
+                <div class="view-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title" style="color: #fbbf24;">🌟 Aura Pro (API)</span>
+                    </div>
+                    <div class="view-actions">
+                        <select id="api-model-selector" class="hub-select" style="max-width: 180px; background: rgba(255,215,0,0.1); border: 1px solid #fbbf24; color: #fbbf24;">
+                            <optgroup label="🔥 Top Tier (Paid)">
+                                <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                                <option value="openai/gpt-4o-mini">GPT-4o Mini (Cheap)</option>
+                                <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B</option>
+                            </optgroup>
+                            <optgroup label="🆓 Stable Free Models">
+                                <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</option>
+                                <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
+                                <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B (Free)</option>
+                                <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Free)</option>
+                            </optgroup>
+                        </select>
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Clear Chat">🧹</button>
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <div id="api-chat-container" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-dark);">
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 20px;">
+                        <p>Welcome to Aura Pro API Mode 🚀</p>
+                        <p>Messages sent while this panel is active will appear here instantly.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="view-panel hidden" id="panel-custom" data-id="custom">
                 <div class="view-header">
-                    <span id="custom-ai-title" class="view-title">Custom AI</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span id="custom-ai-title" class="view-title">Custom AI</span>
+                    </div>
                     <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
+                        <button class="btn-copy-response" title="Copy Response">📋</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
                         <button class="btn-move-left" title="Move Left">◀</button>
                         <button class="btn-move-right" title="Move Right">▶</button>
                         <button class="btn-close-panel" title="Close">✕</button>
@@ -213,12 +314,28 @@
 
                 <!-- AI Providers -->
                 <section>
-                    <h3>🤖 AI Providers</h3>
+                    <h3>🤖 AI Providers (Webview Mode)</h3>
                     <div class="ai-grid">
                         <label class="ai-item"><input type="radio" name="ai-provider" value="gemini" checked> Gemini</label>
                         <label class="ai-item"><input type="radio" name="ai-provider" value="chatgpt"> ChatGPT</label>
                         <label class="ai-item"><input type="radio" name="ai-provider" value="claude"> Claude</label>
                         <label class="ai-item"><input type="radio" name="ai-provider" value="deepseek"> DeepSeek</label>
+                    </div>
+                </section>
+                
+                <!-- OpenRouter (Pro Mode) -->
+                <section style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); padding: 10px; border-radius: 8px;">
+                    <h3 style="color: #fbbf24;">🌟 Aura AI Pro (API Mode)</h3>
+                    <div class="setting-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label>OpenRouter API Key</label>
+                            <a href="https://openrouter.ai/keys" target="_blank" style="font-size: 0.8rem; color: #fbbf24; text-decoration: none; display: flex; align-items: center; gap: 4px;" title="Get your API key">🔑 Get API Key ↗</a>
+                        </div>
+                        <input type="password" id="set-openrouter-key" placeholder="sk-or-v1-..." style="width: 100%;">
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 5px;">*Enable API mode for AI Debate, Workflow Chain, and Compare features.</p>
+                    </div>
+                    <div class="setting-item" style="margin-top: 10px;">
+                        <label><input type="checkbox" id="set-use-api-mode"> Enable Pro Mode (Use API instead of Webview)</label>
                     </div>
                 </section>
 
@@ -275,19 +392,23 @@
                     <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid var(--glass-border); font-size: 0.85rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Send Prompt (Active)</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl + H</kbd>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘ + H</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Broadcast (All)</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl+Shift+H</kbd>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘+Shift+H</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Toggle Sidebar</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl + G</kbd>
+                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘ + G</kbd>
                         </div>
-                        <div style="display: flex; justify-content: space-between;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                             <span style="color: rgba(255,255,255,0.6);">Close Modals</span>
                             <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Esc</kbd>
+                        </div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                            <span style="color: var(--accent); font-weight: bold; font-size: 0.9rem;">💡 Pro Trick:</span><br>
+                            <span style="color: rgba(255,255,255,0.7); display: inline-block; margin-top: 5px;">Hold <kbd style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Shift</kbd> + <kbd style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Scroll Wheel</kbd>&nbsp; to scroll AI panels sideways!</span>
                         </div>
                     </div>
                 </section>

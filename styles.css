@@ -158,6 +158,31 @@ body {
     font-weight: 600;
 }
 
+    font-weight: 600;
+}
+
+#pro-utilities button {
+    background: rgba(251, 191, 36, 0.05);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+}
+
+#pro-utilities button:hover {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    transform: translateX(5px);
+}
+
 .add-plugin-btn {
     border: 1px dashed var(--glass-border) !important;
     opacity: 0.6;
@@ -169,12 +194,69 @@ body {
     border-color: var(--accent) !important;
 }
 
-.sidebar-footer {
-    padding-top: 20px;
-    border-top: 1px solid var(--glass-border);
+.sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid var(--glass-border);
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    z-index: 1000;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.icon-only-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-only-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.prompt-library {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.prompt-library > div:first-of-type {
+    flex-shrink: 0;
+    padding-bottom: 10px;
+}
+
+.prompt-list {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .sidebar-footer > button {
@@ -440,11 +522,85 @@ body {
     display: flex;
     flex-direction: column;
     flex: 1 0 450px; /* Base width per panel */
-    min-width: 450px; /* Prevent panels from getting too tiny */
+    min-width: 300px; /* Allowed to get smaller if dragged */
     border-right: 1px solid var(--glass-border);
-    transition: opacity 0.3s ease;
     background: var(--bg-dark); 
     animation: fadeIn 0.4s ease-out;
+    resize: none; /* Disable native resize in favor of our custom logic */
+    overflow: hidden; 
+    transition: width 0.1s ease; /* smooth resize */
+}
+
+.view-panel:hover {
+    border-right-color: var(--accent); /* show resize edge hint */
+}
+
+/* Fullscreen Focus Mode */
+.view-panel.fullscreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    resize: none;
+}
+
+/* Status Indicator Dot */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #22c55e; /* Ready Green */
+    margin-right: 8px;
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+    transition: background-color 0.3s;
+}
+
+.status-dot.loading {
+    background-color: #eab308; /* Generating Yellow */
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.5);
+    animation: pulse 1s infinite alternate;
+}
+
+.status-dot.error {
+    background-color: #ef4444; /* Error Red */
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+
+@keyframes pulse {
+    from { opacity: 0.4; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1.1); }
+}
+
+/* --- Dynamic Layout Modes --- */
+/* 1. Scroll (Default) - relies on the base .webview-stack and .view-panel above */
+
+/* 2. Split (Evenly) */
+.webview-stack.layout-split {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+.webview-stack.layout-split .view-panel {
+    flex: 1 1 0%;
+    min-width: 0; /* Let flex handle width exactly evenly, down to 0 if needed */
+}
+
+/* 3. Grid */
+.webview-stack.layout-grid {
+    flex-wrap: wrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    align-content: flex-start;
+}
+.webview-stack.layout-grid .view-panel {
+    flex: 1 1 450px; /* Try to fill at least 450px per grid item */
+    height: 50vh;    /* Grid panels have fixed height so they wrap and stack */
+    min-height: 400px;
+    border-bottom: 1px solid var(--glass-border);
 }
 
 .view-panel.hidden {
@@ -888,4 +1044,97 @@ body.light-mode .auth-toggle-text { color: rgba(0, 0, 0, 0.7); }
 body.light-mode .title-bar { background: rgba(241, 245, 249, 0.95); }
 body.light-mode .title-bar-controls button:hover { background: rgba(0, 0, 0, 0.1); }
 body.light-mode #btn-close-win:hover { background: #ef4444; color: white; }
+
+/* --- API Mode Chat Bubble UI --- */
+.api-msg {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    animation: bubbleIn 0.3s ease-out;
+    align-items: flex-start;
+}
+
+.msg-avatar {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-msg {
+    flex-direction: row-reverse;
+}
+
+.user-msg .msg-avatar {
+    background: var(--accent);
+    color: #000;
+}
+
+.api-msg .msg-content {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word;
+    position: relative;
+}
+
+.user-msg .msg-content {
+    background: var(--accent);
+    color: #000;
+    border-radius: 18px 4px 18px 18px;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+}
+
+.ai-msg {
+    align-self: flex-start;
+    max-width: 85%;
+}
+
+.ai-msg .msg-content {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 4px 18px 18px 18px;
+    backdrop-filter: blur(4px);
+    flex: 1;
+}
+
+.msg-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+/* Typing Animation */
+.typing-dots span {
+    animation: typing 1.4s infinite;
+    display: inline-block;
+    margin: 0 1px;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-5px); }
+}
+
+@keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body.light-mode .ai-msg .msg-content {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+/* --- END API CHAT UI --- */
 

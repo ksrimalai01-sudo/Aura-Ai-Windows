@@ -228,8 +228,31 @@ const panels = {
     claude: document.getElementById('panel-claude'),
     deepseek: document.getElementById('panel-deepseek'),
     leonardo: document.getElementById('panel-leonardo'),
+    api: document.getElementById('panel-api'),
     custom: document.getElementById('panel-custom')
 };
+
+// --- Add event listeners for webview loading states (Status Indicator) ---
+Object.keys(webviews).forEach(provider => {
+    const wv = webviews[provider];
+    const panel = panels[provider];
+    if (wv && panel) {
+        const dot = panel.querySelector('.status-dot');
+        if (dot) {
+            wv.addEventListener('did-start-loading', () => {
+                dot.classList.add('loading');
+                dot.classList.remove('error');
+            });
+            wv.addEventListener('did-stop-loading', () => {
+                dot.classList.remove('loading');
+            });
+            wv.addEventListener('did-fail-load', () => {
+                dot.classList.remove('loading');
+                dot.classList.add('error');
+            });
+        }
+    }
+});
 
 // Panel Toggle Logic
 function toggleView(provider, show) {
@@ -251,22 +274,66 @@ function saveLayoutState() {
     const domPanels = Array.from(container.querySelectorAll('.view-panel'));
     settings.panelOrder = domPanels.map(p => p.getAttribute('data-id'));
     
+    // Save panel width or mode properties generically
     const activePanels = domPanels.filter(p => !p.classList.contains('hidden')).map(p => p.getAttribute('data-id'));
     if (settings.currentMode) {
         settings.layouts[settings.currentMode] = activePanels;
     }
+    
+    const layoutSelect = document.getElementById('layout-style');
+    if (layoutSelect) settings.layoutStyle = layoutSelect.value;
+    
     localStorage.setItem('aura_settings', JSON.stringify(settings));
+    renderToggles(); // Re-render toggles to match new order easily!
 }
 
-// Bind top toggles
-document.querySelectorAll('.ai-toggle').forEach(toggle => {
-    toggle.addEventListener('click', (e) => {
-        const provider = e.target.getAttribute('data-provider');
-        const isCurrentlyActive = e.target.classList.contains('active');
-        toggleView(provider, !isCurrentlyActive);
+// Layout Mode Select Logic
+const layoutSelect = document.getElementById('layout-style');
+if (layoutSelect) {
+    layoutSelect.addEventListener('change', (e) => {
+        applyLayoutStyle(e.target.value);
         saveLayoutState();
     });
-});
+}
+function applyLayoutStyle(style) {
+    const container = document.getElementById('webview-container');
+    container.classList.remove('layout-scroll', 'layout-grid', 'layout-split');
+    container.classList.add(`layout-${style}`);
+    if (layoutSelect) layoutSelect.value = style;
+}
+
+// Remove hardcoded top toggles logic and replace with dynamic function
+function renderToggles() {
+    const container = document.getElementById('dynamic-toggles');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const names = {
+        gemini: 'Gemini', chatgpt: 'ChatGPT', claude: 'Claude',
+        deepseek: 'DeepSeek', leonardo: 'Leonardo AI', api: '🌟 Aura Pro', custom: settings.customAIName || 'Custom AI'
+    };
+
+    settings.panelOrder.forEach(provider => {
+        if (provider === 'custom' && !settings.showCustomAI) return;
+        if (provider === 'api' && !settings.useApiMode) return; // Hide API tab if Pro Mode is off
+        
+        const btn = document.createElement('button');
+        btn.className = 'ai-toggle';
+        btn.setAttribute('data-provider', provider);
+        btn.innerText = names[provider] || provider;
+        
+        if (settings.layouts[settings.currentMode] && settings.layouts[settings.currentMode].includes(provider)) {
+            btn.classList.add('active');
+        }
+        
+        btn.onclick = (e) => {
+            const isCurrentlyActive = btn.classList.contains('active');
+            toggleView(provider, !isCurrentlyActive);
+            saveLayoutState();
+        };
+        container.appendChild(btn);
+    });
+}
 
 // Panel controls (Move Left, Move Right, Close)
 document.getElementById('webview-container').addEventListener('click', (e) => {
@@ -290,6 +357,66 @@ document.getElementById('webview-container').addEventListener('click', (e) => {
             panel.parentNode.insertBefore(panel.nextElementSibling, panel);
             saveLayoutState();
         }
+    } else if (btn.classList.contains('btn-reload')) {
+        const wv = webviews[provider];
+        if (wv) wv.reload();
+    } else if (btn.classList.contains('btn-regen')) {
+        if (lastPrompt) {
+            injectToSpecificAI(provider, lastPrompt);
+        } else {
+            showToast("⚠️ No previous prompt to regenerate.");
+        }
+    } else if (btn.classList.contains('btn-copy-response')) {
+        const wv = webviews[provider];
+        if (id === 'api') {
+            const container = document.getElementById('api-chat-container');
+            const msgs = container.querySelectorAll('div');
+            if (msgs.length > 0) {
+                const lastAiMsg = Array.from(msgs).reverse().find(m => m.style.alignSelf === 'flex-start');
+                if (lastAiMsg) {
+                    navigator.clipboard.writeText(lastAiMsg.innerText);
+                    showToast("📋 Response copied to clipboard!");
+                }
+            }
+            return;
+        }
+        if (wv) {
+            wv.executeJavaScript(`
+                (function() {
+                    const snippets = [
+                        '.markdown', '.result-streaming', '.message-content', 
+                        'article', '.response-block', '.copyable-text', 
+                        // Specific for giants
+                        'div[data-message-author-role="assistant"]'
+                    ];
+                    let text = "No response found.";
+                    for (const s of snippets) {
+                        const els = document.querySelectorAll(s);
+                        if (els.length > 0) {
+                            text = els[els.length - 1].innerText;
+                            break;
+                        }
+                    }
+                    return text;
+                })()
+            `).then(text => {
+                navigator.clipboard.writeText(text);
+                showToast("📋 Last response copied to clipboard!");
+            }).catch(err => {
+                showToast("❌ Copy failed: " + err.message);
+            });
+        }
+    } else if (btn.classList.contains('btn-focus')) {
+        const isFullscreen = panel.classList.contains('fullscreen');
+        // If not fullscreen, make other things hidden essentially, or just position absolute over everything.
+        // We use the .fullscreen CSS class to do this cleanly.
+        if (isFullscreen) {
+            panel.classList.remove('fullscreen');
+            btn.innerText = '⤢';
+        } else {
+            panel.classList.add('fullscreen');
+            btn.innerText = '⤣';
+        }
     }
 });
 
@@ -298,17 +425,7 @@ document.getElementById('btn-min-win').onclick = () => window.electronAPI.send('
 document.getElementById('btn-max-win').onclick = () => window.electronAPI.send('toMain', { type: 'window-control', action: 'maximize' });
 document.getElementById('btn-close-win').onclick = () => window.electronAPI.send('toMain', { type: 'window-control', action: 'close' });
 
-// Theme Toggle
-const btnThemeToggle = document.getElementById('btn-theme-toggle');
-if (btnThemeToggle) {
-    btnThemeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        const isLight = document.body.classList.contains('light-mode');
-        btnThemeToggle.innerText = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
-        settings.theme = isLight ? 'light' : 'dark';
-        localStorage.setItem('aura_settings', JSON.stringify(settings));
-    });
-}
+// --- Section removed due to duplication ---
 
 // Prompt Data / プロンプトデータ / ข้อมูลคำสั่ง
 let customPrompts = {}; // loaded from settings
@@ -346,21 +463,7 @@ function getActivePrompts(mode) {
 
 // Webview references & Injection Logic
 // インジェクション (Injection) - การส่งข้อความเข้าช่องพิมพ์โดยตรง
-function getTargetWebview() {
-    // Inject into the provider selected in HUB
-    if (typeof settings !== 'undefined' && settings.provider) {
-        const wv = webviews[settings.provider];
-        const panel = panels[settings.provider];
-        if (wv && panel && !panel.classList.contains('hidden')) return wv;
-    }
-    // Fallback: the first visible panel
-    const visiblePanel = Object.values(panels).find(p => p && !p.classList.contains('hidden'));
-    if (visiblePanel) {
-        const provider = visiblePanel.getAttribute('data-id');
-        return webviews[provider];
-    }
-    return null;
-}
+// Hub Logic using consolidated getTargetWebview below
 
 // Hub Logic
 const hubInput = document.getElementById('hub-input');
@@ -378,10 +481,12 @@ if (btnToggleSidebar) {
 function renderChips(mode) {
     quickChips.innerHTML = '';
     const activePrompts = getActivePrompts(mode);
-    activePrompts.forEach(p => {
+    activePrompts.forEach((p, index) => {
         const span = document.createElement('span');
         span.className = 'chip';
-        span.innerText = p.label;
+        // Add Shortcut text
+        const shortcut = index < 5 ? ` [Alt+${index + 1}]` : '';
+        span.innerText = p.label + shortcut;
         span.onclick = () => {
             const userInput = hubInput.value.trim();
             const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
@@ -395,7 +500,13 @@ function renderChips(mode) {
     });
 }
 
-btnSendRaw.onclick = () => injectToAI(hubInput.value);
+btnSendRaw.onclick = () => {
+    const val = hubInput.value;
+    if(val.trim()) {
+        injectToAI(val);
+        hubInput.value = ''; // Auto clear after sending
+    }
+};
 
 // Allow pressing Enter to send
 hubInput.addEventListener('keypress', (e) => {
@@ -405,13 +516,34 @@ hubInput.addEventListener('keypress', (e) => {
     }
 });
 
+// Shortcut Hotkeys for Prompts (Alt + 1-5)
+document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key >= '1' && e.key <= '5') {
+        e.preventDefault();
+        const index = parseInt(e.key) - 1;
+        const activePrompts = getActivePrompts(settings.currentMode);
+        if (activePrompts[index]) {
+            const p = activePrompts[index];
+            const userInput = hubInput.value.trim();
+            const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
+                                     .replace('[YOUR TOPIC]', userInput)
+                                     .replace('[PASTE SENTENCE]', userInput)
+                                     .replace('[YOUR TEXT]', userInput)
+                                     .replace('[YOUR KANJI]', userInput);
+            injectToAI(fullPrompt);
+            showToast(`🚀 Sent Prompt: ${p.label}`);
+        }
+    }
+});
+
 function renderPrompts(mode) {
     promptList.innerHTML = ''; 
     const activePrompts = getActivePrompts(mode);
     activePrompts.forEach((p, index) => {
         const div = document.createElement('div');
         div.className = 'prompt-item';
-        div.innerText = p.label;
+        const shortcut = index < 5 ? ` (Alt+${index + 1})` : '';
+        div.innerText = p.label + shortcut;
         div.title = "Left Click: Copy/Send. Right Click: Edit\n\nPrompt Text:\n" + p.text; // Tooltip showing full text
         div.onclick = () => {
             // Toggle: If input is empty, just copy. If not, inject.
@@ -458,20 +590,38 @@ function switchMode(mode) {
     }
 
     // Restore saved layout or default
-    const layout = settings.layouts[mode];
+    let layout = settings.layouts ? settings.layouts[mode] : null;
     if (layout && layout.length > 0) {
         layout.forEach(p => toggleView(p, true));
     } else {
+        // Safe Fallbacks
         if (mode === 'general') { toggleView('gemini', true); toggleView('chatgpt', true); }
         else if (mode === 'ecommerce') { toggleView('gemini', true); toggleView('leonardo', true); }
         else if (mode === 'japanese') { toggleView('gemini', true); toggleView('claude', true); }
+        else {
+            // If it's a custom/unknown mode, at least show the first panel if available
+            const firstPanel = settings.panelOrder[0] || 'gemini';
+            toggleView(firstPanel, true);
+        }
+    }
+
+    // Apply saved layout style
+    applyLayoutStyle(settings.layoutStyle || 'scroll');
+
+    // Restore saved panel order visually
+    if (settings.panelOrder && settings.panelOrder.length > 0) {
+        const container = document.getElementById('webview-container');
+        settings.panelOrder.forEach(id => {
+            const p = panels[id];
+            if (p) container.appendChild(p); // Reordering the DOM elements
+        });
     }
 
     if (!settings.layouts[mode] || !settings.layouts[mode].includes(settings.provider)) {
         settings.provider = (layout && layout.length > 0) ? layout[0] : 'gemini';
     }
     
-    document.getElementById('hub-ai-selector').value = settings.provider;
+    document.getElementById('hub-ai-selector').value = settings.provider || 'gemini';
     localStorage.setItem('aura_settings', JSON.stringify(settings));
 }
 
@@ -542,7 +692,9 @@ let settings = {
     username: '',
     communityAlias: '',
     communityModes: [],
-    customPrompts: null // null means use defaultPrompts
+    customPrompts: null, // null means use defaultPrompts
+    useApiMode: false,
+    openRouterKey: ''
 };
     
 function applySettingsToUI() {
@@ -581,6 +733,7 @@ function applySettingsToUI() {
     if (settings.currentMode === 'japanese' && settings.showJapanese === false) settings.currentMode = 'general';
     
     // Sync UI
+    const inputUsername = document.getElementById('set-username');
     if (inputUsername) inputUsername.value = settings.username || '';
     
     const inputAlias = document.getElementById('set-alias');
@@ -588,11 +741,16 @@ function applySettingsToUI() {
 
     const providerRadio = document.querySelector(`input[name="ai-provider"][value="${settings.provider}"]`);
     if (providerRadio) providerRadio.checked = true;
-    document.getElementById('set-use-prefix').checked = settings.usePrefix;
-    document.getElementById('set-prefix-val').value = settings.prefix;
-    document.getElementById('set-use-suffix').checked = settings.useSuffix;
-    document.getElementById('set-suffix-val').value = settings.suffix;
-    document.getElementById('set-auto-send').checked = settings.autoSend;
+    const chkPrefix = document.getElementById('set-use-prefix');
+    if (chkPrefix) chkPrefix.checked = settings.usePrefix;
+    const txtPrefix = document.getElementById('set-prefix-val');
+    if (txtPrefix) txtPrefix.value = settings.prefix;
+    const chkSuffix = document.getElementById('set-use-suffix');
+    if (chkSuffix) chkSuffix.checked = settings.useSuffix;
+    const txtSuffix = document.getElementById('set-suffix-val');
+    if (txtSuffix) txtSuffix.value = settings.suffix;
+    const chkAutoSend = document.getElementById('set-auto-send');
+    if (chkAutoSend) chkAutoSend.checked = settings.autoSend;
     if (document.getElementById('set-show-ecommerce')) document.getElementById('set-show-ecommerce').checked = settings.showEcommerce !== false;
     if (document.getElementById('set-show-japanese')) document.getElementById('set-show-japanese').checked = settings.showJapanese !== false;
     const chkRead = document.getElementById('set-auto-read');
@@ -605,19 +763,28 @@ function applySettingsToUI() {
     document.getElementById('set-custom-url').value = settings.customAIUrl || '';
     
     document.getElementById('custom-ai-title').innerText = settings.customAIName || 'Custom AI';
-    const toggleCustom = document.getElementById('toggle-custom');
-    if (showCustom) {
-        toggleCustom.classList.remove('hidden');
-        toggleCustom.innerText = settings.customAIName || 'Custom AI';
-        if (settings.customAIUrl && webviews.custom.src !== settings.customAIUrl) {
-            webviews.custom.src = settings.customAIUrl;
-        }
-    } else {
-        toggleCustom.classList.add('hidden');
+    if (showCustom && settings.customAIUrl && webviews.custom.src !== settings.customAIUrl) {
+        webviews.custom.src = settings.customAIUrl;
+    }
+    if (!showCustom) {
         toggleView('custom', false);
     }
 
+    renderToggles(); // Ensure Dynamic Toggles match the mode, names, and custom AI visibility!
     document.getElementById('hub-ai-selector').value = settings.provider;
+    
+    // Pro Mode state update
+    const proUtils = document.getElementById('pro-utilities');
+    if (proUtils) proUtils.style.display = settings.useApiMode ? 'flex' : 'none';
+
+    const chkApiMode = document.getElementById('set-use-api-mode');
+    if (chkApiMode) chkApiMode.checked = settings.useApiMode === true;
+    const txtApiKey = document.getElementById('set-openrouter-key');
+    if (txtApiKey) txtApiKey.value = settings.openRouterKey || '';
+    
+    if (settings.useApiMode) {
+        showToast("🌟 Aura AI Pro Mode Active!\nFuture API calls will be routed via OpenRouter.");
+    }
 }
 
 let isSyncing = false;
@@ -664,11 +831,24 @@ function loadSettings() {
         settings = { ...settings, ...parsed };
         if (!settings.layouts) settings.layouts = { general: ['gemini', 'chatgpt'], ecommerce: ['gemini', 'leonardo'], japanese: ['gemini', 'claude'] };
         if (!settings.layouts.general) settings.layouts.general = ['gemini', 'chatgpt'];
-        if (!settings.panelOrder) settings.panelOrder = ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo'];
+        
+        // Ensure new panels are in panelOrder
+        if (!settings.panelOrder) settings.panelOrder = ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'api', 'custom'];
+        if (!settings.panelOrder.includes('api')) settings.panelOrder.push('api');
+        
         if (!settings.currentMode) settings.currentMode = 'general';
         if (!settings.customPrompts) settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
     } else {
         settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
+    }
+    
+    // Enable/disable the API option in the hub dropdown based on Pro Mode
+    const apiOption = document.querySelector('#hub-ai-selector option[value="api"]');
+    if (apiOption) {
+        apiOption.style.display = settings.useApiMode ? 'block' : 'none';
+        if (!settings.useApiMode && settings.provider === 'api') {
+            settings.provider = 'gemini'; // Revert to safe default if mode is disabled
+        }
     }
     
     applySettingsToUI();
@@ -678,35 +858,61 @@ function loadSettings() {
 }
 
 function saveSettings() {
-    const providerRadio = document.querySelector('input[name="ai-provider"]:checked');
-    if (providerRadio) settings.provider = providerRadio.value;
-    settings.usePrefix = document.getElementById('set-use-prefix').checked;
-    settings.prefix = document.getElementById('set-prefix-val').value;
-    settings.useSuffix = document.getElementById('set-use-suffix').checked;
-    settings.suffix = document.getElementById('set-suffix-val').value;
-    settings.autoSend = document.getElementById('set-auto-send').checked;
-    settings.autoRead = document.getElementById('set-auto-read').checked;
-    settings.showEcommerce = document.getElementById('set-show-ecommerce').checked;
-    settings.showJapanese = document.getElementById('set-show-japanese').checked;
-    settings.showCustomAI = document.getElementById('set-show-custom').checked;
-    settings.customAIName = document.getElementById('set-custom-name').value.trim() || 'Custom AI';
-    settings.customAIUrl = document.getElementById('set-custom-url').value.trim();
-    settings.communityAlias = document.getElementById('set-alias').value.trim();
+    try {
+        const providerRadio = document.querySelector('input[name="ai-provider"]:checked');
+        if (providerRadio) settings.provider = providerRadio.value;
+        settings.usePrefix = document.getElementById('set-use-prefix').checked;
+        settings.prefix = document.getElementById('set-prefix-val').value;
+        settings.useSuffix = document.getElementById('set-use-suffix').checked;
+        settings.suffix = document.getElementById('set-suffix-val').value;
+        settings.autoSend = document.getElementById('set-auto-send').checked;
+        
+        let chkAutoRead = document.getElementById('set-auto-read');
+        if(chkAutoRead) settings.autoRead = chkAutoRead.checked;
+        
+        let chkEcom = document.getElementById('set-show-ecommerce');
+        if(chkEcom) settings.showEcommerce = chkEcom.checked;
+        
+        let chkJpn = document.getElementById('set-show-japanese');
+        if(chkJpn) settings.showJapanese = chkJpn.checked;
+        
+        let chkCustom = document.getElementById('set-show-custom');
+        if(chkCustom) settings.showCustomAI = chkCustom.checked;
+        
+        let txtCustomName = document.getElementById('set-custom-name');
+        if(txtCustomName) settings.customAIName = txtCustomName.value.trim() || 'Custom AI';
+        
+        let txtCustomUrl = document.getElementById('set-custom-url');
+        if(txtCustomUrl) settings.customAIUrl = txtCustomUrl.value.trim();
+        
+        let txtAlias = document.getElementById('set-alias');
+        if(txtAlias) settings.communityAlias = txtAlias.value.trim();
+        
+        let chkApiMode = document.getElementById('set-use-api-mode');
+        if(chkApiMode) settings.useApiMode = chkApiMode.checked;
+        
+        let txtApiKey = document.getElementById('set-openrouter-key');
+        if(txtApiKey) settings.openRouterKey = txtApiKey.value.trim();
 
-    localStorage.setItem('aura_settings', JSON.stringify(settings));
-    applySettingsToUI();
-    switchMode(settings.currentMode || 'general');
-    applyProviderChange(settings.provider);
-    
-    // Backup to cloud
-    saveToCloud();
+        localStorage.setItem('aura_settings', JSON.stringify(settings));
+        applySettingsToUI();
+        switchMode(settings.currentMode || 'general');
+        applyProviderChange(settings.provider);
+        
+        // Backup to cloud
+        saveToCloud();
 
-    showToast("⚙️ Settings Saved Successfully!");
-    document.getElementById('settings-overlay').classList.add('hidden');
+        showToast("⚙️ Settings Saved Successfully!");
+        document.getElementById('settings-overlay').classList.add('hidden');
+    } catch (e) {
+        showToast("❌ Save Error: " + e.message);
+        console.error(e);
+    }
 }
 
 function applyProviderChange(provider) {
-    document.getElementById('hub-ai-selector').value = provider;
+    let hubSelect = document.getElementById('hub-ai-selector');
+    if(hubSelect) hubSelect.value = provider;
     // ensure the target provider's panel is visible
     toggleView(provider, true);
     console.log(`Switched Target Provider to: ${provider}`);
@@ -761,8 +967,13 @@ function broadcastPrompt(text) {
     showToast("📢 Broadcasted message to all visible AIs!");
 }
 
-async function injectToSpecificAI(id, text) {
-    const wv = webviews[id];
+async function injectToSpecificAI(idOrWv, text) {
+    if (idOrWv === 'api') {
+        fetchOpenRouter(text);
+        return;
+    }
+    
+    let wv = (typeof idOrWv === 'string') ? webviews[idOrWv] : idOrWv;
     if (!wv) return;
     
     let finalPrompt = text;
@@ -772,32 +983,29 @@ async function injectToSpecificAI(id, text) {
     const script = `
         (function() {
             const selectors = ['div[contenteditable="true"]', '#prompt-textarea', 'textarea'];
-            let inputField;
+            let inp;
             for (const s of selectors) {
-                inputField = document.querySelector(s);
-                if (inputField) break;
+                inp = document.querySelector(s);
+                if (inp) break;
             }
-
-            if (inputField) {
-                const textToType = \`${finalPrompt.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\\$/g, '\\\\$')}\`;
-                
-                if (inputField.tagName === 'DIV') {
-                    inputField.innerText = textToType;
-                } else {
-                    inputField.value = textToType;
-                }
+            if (inp) {
+                const txt = \`${finalPrompt.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\\$/g, '\\\\$')}\`;
+                if (inp.tagName === 'DIV') inp.innerText = txt;
+                else inp.value = txt;
                 
                 const evConf = { bubbles: true, cancelable: true };
-                inputField.dispatchEvent(new Event('input', evConf));
-                
+                inp.dispatchEvent(new Event('input', evConf));
+                inp.dispatchEvent(new Event('change', evConf));
+
                 if (${settings.autoSend}) {
                     setTimeout(() => {
-                        const btns = ['button[aria-label="Send prompt"]', 'button.send-button', 'button[type="submit"]', 'button:has(svg)'];
-                        for (const b of btns) {
-                            const btn = document.querySelector(b);
-                            if (btn) { btn.click(); break; }
+                        inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+                        const sb = ['button[data-testid="send-button"]', 'button[aria-label*="Send"]', '.send-button', 'button:has(svg)'];
+                        for (const s of sb) {
+                            const b = document.querySelector(s);
+                            if (b && !b.disabled) { b.click(); break; }
                         }
-                    }, 500);
+                    }, 400);
                 }
             }
         })();
@@ -805,137 +1013,106 @@ async function injectToSpecificAI(id, text) {
     wv.executeJavaScript(script);
 }
 
-// ... injection logic ...
+// --- Injection & Target Management ---
+function getTargetWebview() {
+    if (settings.provider === 'api') return 'api';
+    const wv = webviews[settings.provider];
+    const panel = panels[settings.provider];
+    if (wv && panel && !panel.classList.contains('hidden')) return wv;
+    
+    // Fallback: the first visible panel
+    const visiblePanel = Object.values(panels).find(p => p && !p.classList.contains('hidden'));
+    if (visiblePanel) {
+        const id = visiblePanel.getAttribute('data-id');
+        return id === 'api' ? 'api' : webviews[id];
+    }
+    return null;
+}
+
 async function injectToAI(text) {
     if (!text || !text.trim()) return;
-    const wv = getTargetWebview();
-    if (!wv) {
-        showToast("⚠️ No Webview active to receive prompt.");
-        return;
-    }
-
-    let finalPrompt = text;
-    if (settings.usePrefix) finalPrompt = settings.prefix.replace('{}', finalPrompt);
-    if (settings.useSuffix) finalPrompt += settings.suffix;
-
-    const script = `
-        (function() {
-            const selectors = ['div[contenteditable="true"]', '#prompt-textarea', 'textarea'];
-            let inputField;
-            for (const s of selectors) {
-                inputField = document.querySelector(s);
-                if (inputField) break;
-            }
-
-            if (inputField) {
-                const textToType = \`${finalPrompt.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\\$/g, '\\\\$')}\`;
-                
-                if (inputField.tagName === 'DIV') {
-                    inputField.innerText = textToType;
-                } else {
-                    inputField.value = textToType;
-                }
-                
-                const evConf = { bubbles: true, cancelable: true };
-                inputField.dispatchEvent(new Event('input', evConf));
-                inputField.dispatchEvent(new Event('change', evConf));
-
-                // Auto Send
-                if (${settings.autoSend}) {
-                    setTimeout(() => {
-                        inputField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-                        
-                        const sendBtnSelectors = [
-                            'button[data-testid="send-button"]', 
-                            'button[aria-label*="Send"]', 
-                            '.send-button'
-                        ];
-                        for (const bs of sendBtnSelectors) {
-                            const btn = document.querySelector(bs);
-                            if (btn && !btn.disabled) { btn.click(); break; }
-                        }
-                    }, 400); // 400ms delay helps framework state catch up
-                }
-
-                // Auto Read Aloud (ChatGPT specific)
-                if (${settings.autoRead} && "${settings.provider}" === "chatgpt") {
-                    let attempts = 0;
-                    const checkReadInterval = setInterval(() => {
-                        attempts++;
-                        const btns = Array.from(document.querySelectorAll('button'));
-                        const readBtn = btns.find(el => el.getAttribute('aria-label') === 'Read aloud');
-                        if (readBtn && !readBtn.disabled) {
-                            readBtn.click();
-                            clearInterval(checkReadInterval);
-                        }
-                        if (attempts > 30) { clearInterval(checkReadInterval); } // Stop after 30 seconds
-                    }, 1000);
-                }
-            }
-        })();
-    `;
-    wv.executeJavaScript(script);
+    lastPrompt = text;
+    const target = getTargetWebview();
     
-    // Auto-clear input after send
-    hubInput.value = '';
-    showToast(`🚀 Prompt Sent to ${settings.provider.toUpperCase()}!`);
+    if (target === 'api') {
+        fetchOpenRouter(text);
+    } else if (target) {
+        injectToSpecificAI(target, text);
+        showToast(`🚀 Prompt Sent to ${settings.provider.toUpperCase()}!`);
+    } else {
+        showToast("⚠️ No visible AI panel to receive prompt.");
+    }
+    hubInput.value = ''; // Auto clear
 }
 
-// UI Event Listeners for Settings
-document.getElementById('btn-settings').onclick = () => {
-    document.getElementById('settings-overlay').classList.remove('hidden');
-};
+// UI Event Listeners & Global Controls
+const btnThemeToggleConsolidated = document.getElementById('btn-theme-toggle');
+if (btnThemeToggleConsolidated) {
+    btnThemeToggleConsolidated.onclick = () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        btnThemeToggleConsolidated.innerText = isLight ? '☀️' : '🌙';
+        settings.theme = isLight ? 'light' : 'dark';
+        localStorage.setItem('aura_settings', JSON.stringify(settings));
+    };
+}
+
+const btnSettingsConsolidated = document.getElementById('btn-settings');
+if (btnSettingsConsolidated) {
+    btnSettingsConsolidated.onclick = () => {
+        document.getElementById('settings-overlay').classList.remove('hidden');
+    };
+}
+
 document.getElementById('btn-close-settings').onclick = () => {
     document.getElementById('settings-overlay').classList.add('hidden');
 };
 document.getElementById('btn-save-settings').onclick = saveSettings;
 
-document.getElementById('btn-update-username').onclick = async () => {
-    const newUsername = document.getElementById('set-username').value.trim().toLowerCase();
-    if (!newUsername) {
-        showToast("⚠️ Please enter a username.");
-        return;
-    }
-    
-    // If it's the same as current, skip
-    if (newUsername === settings.username) return;
-
-    try {
-        // Check uniqueness
-        const q = query(collection(db, "usernames"), where("username", "==", newUsername));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            showToast("❌ Username already taken.");
+const btnUpdateUser = document.getElementById('btn-update-username');
+if (btnUpdateUser) {
+    btnUpdateUser.onclick = async () => {
+        const newUsername = document.getElementById('set-username').value.trim().toLowerCase();
+        if (!newUsername) {
+            showToast("⚠️ Please enter a username.");
             return;
         }
+        if (newUsername === settings.username) return;
 
-        // Mapping username to current user's email
-        if (auth.currentUser && auth.currentUser.email) {
-            // Delete old mapping if exists
-            if (settings.username) {
-                // In a production app, you might want to handle this better, 
-                // but for now we'll just overwrite/add.
+        try {
+            const q = query(collection(db, "usernames"), where("username", "==", newUsername));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                showToast("❌ Username already taken.");
+                return;
             }
-            
-            await setDoc(doc(db, "usernames", newUsername), { email: auth.currentUser.email.toLowerCase() });
-            settings.username = newUsername;
-            localStorage.setItem('aura_settings', JSON.stringify(settings));
-            saveToCloud();
-            showToast("✅ Username updated successfully!");
+            if (auth.currentUser && auth.currentUser.email) {
+                await setDoc(doc(db, "usernames", newUsername), { email: auth.currentUser.email.toLowerCase() });
+                settings.username = newUsername;
+                localStorage.setItem('aura_settings', JSON.stringify(settings));
+                saveToCloud();
+                showToast("✅ Username updated successfully!");
+            }
+        } catch (e) {
+            showToast("❌ Error updating username: " + e.message);
         }
-    } catch (e) {
-        showToast("❌ Error updating username: " + e.message);
-    }
-};
+    };
+}
 
-document.getElementById('btn-logout').onclick = async () => {
-    try {
-        await signOut(auth);
-        showToast("🚪 Signed out successfully");
-    } catch (error) {
-        console.error("Logout Error", error);
-    }
-};
+const btnLogoutConsolidated = document.getElementById('btn-logout');
+if (btnLogoutConsolidated) {
+    btnLogoutConsolidated.onclick = async () => {
+        if (confirm("Are you sure you want to sign out?")) {
+            try {
+                await signOut(auth);
+                showToast("👋 Signed out successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                console.error("Logout Error", error);
+            }
+        }
+    };
+}
 
 // --- Custom Prompt Management ---
 const promptOverlay = document.getElementById('prompt-overlay');
@@ -1423,3 +1600,287 @@ if (searchAddonsInput) {
     };
 }
 // Note: Initial load is now handled by onAuthStateChanged!
+
+// --- API MODE (OPENROUTER) INTEGRATION --- //
+let apiChatHistory = [];
+
+async function fetchOpenRouter(promptText) {
+    if (!settings.openRouterKey) {
+        showToast("⚠️ API Mode requires an OpenRouter API Key. Please add it in settings.");
+        toggleView('api', true);
+        applyProviderChange('api');
+        return;
+    }
+
+    const container = document.getElementById('api-chat-container');
+    const modelSelector = document.getElementById('api-model-selector');
+    const selectedModel = modelSelector ? modelSelector.value : 'google/gemini-2.5-flash:free';
+
+    // Ensure the panel is visible if not already
+    toggleView('api', true);
+    
+    // Create User message bubble
+    const userMsg = document.createElement('div');
+    userMsg.className = 'api-msg user-msg';
+    userMsg.innerHTML = `
+        <div class="msg-avatar">👤</div>
+        <div class="msg-content">${promptText}</div>
+    `;
+    container.appendChild(userMsg);
+    
+    // Create AI loading bubble
+    const aiMsg = document.createElement('div');
+    aiMsg.className = 'api-msg ai-msg';
+    const aiContent = document.createElement('div');
+    aiContent.className = 'msg-content';
+    aiContent.innerHTML = `
+        <div class="msg-header" style="display:flex; align-items:center; gap:5px; margin-bottom:5px; font-size: 0.75rem; color: #fbbf24;">
+            <span>✨ Aura AI</span>
+            <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
+        <div class="ai-text-target"><i>Thinking...</i></div>
+    `;
+    aiMsg.innerHTML = `<div class="msg-avatar">🤖</div>`;
+    aiMsg.appendChild(aiContent);
+    container.appendChild(aiMsg);
+    
+    const aiTextContainer = aiContent.querySelector('.ai-text-target');
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+
+    apiChatHistory.push({ role: "user", content: promptText });
+
+    const apiKey = (settings.openRouterKey || "").trim();
+    if (!apiKey) {
+        aiTextContainer.innerHTML = `<span style="color: #ef4444;">❌ API Error: Missing API Key</span>
+        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Go to Settings and add your OpenRouter key.</p>`;
+        return;
+    }
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://aura-ai.local",
+                "X-Title": "Aura AI Pro",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: selectedModel,
+                messages: apiChatHistory
+            })
+        });
+
+        if (!response.ok) {
+             const errorData = await response.json();
+             const msg = errorData.error ? errorData.error.message : response.statusText;
+             throw new Error(msg);
+        }
+
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+        
+        apiChatHistory.push({ role: "assistant", content: reply });
+        
+        // --- WOW FACTOR: Streaming Simulation ---
+        aiContent.querySelector('.typing-dots').style.display = 'none';
+        aiTextContainer.innerHTML = "";
+        let i = 0;
+        const speed = 12; // ms
+        
+        function typeEffect() {
+            if (i < reply.length) {
+                const char = reply.charAt(i);
+                aiTextContainer.innerText += char;
+                i++;
+                container.scrollTop = container.scrollHeight;
+                setTimeout(typeEffect, speed);
+            } else {
+                // Final render with basic markdown
+                let formatted = reply
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
+                    .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1); padding:2px 4px; border-radius:4px; font-family:monospace;">$1</code>'); // code
+                
+                aiTextContainer.innerHTML = formatted;
+                
+                // Add Copy Button to the bubble
+                const copyBtn = document.createElement('button');
+                copyBtn.innerHTML = "📋";
+                copyBtn.title = "Copy this response";
+                copyBtn.style.cssText = "background:transparent; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:0.8rem; margin-top:8px; align-self:flex-end;";
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(reply);
+                    showToast("✅ Response copied!");
+                };
+                aiContent.appendChild(copyBtn);
+
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+        typeEffect();
+
+    } catch (err) {
+        aiTextContainer.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 5px 10px; border-radius: 8px; display: block;">❌ API Error: ${err.message}</span>
+        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Check your OpenRouter API Key in Settings.</p>`;
+        console.error("OpenRouter API Error:", err);
+    }
+}
+
+// Attach clear chat logic to the reload button of the API panel if element exists
+setTimeout(() => {
+    const apiPanelBtnReload = document.querySelector('#panel-api .btn-reload');
+    if(apiPanelBtnReload) {
+        apiPanelBtnReload.onclick = () => {
+            // Clear chat
+            apiChatHistory = [];
+            const container = document.getElementById('api-chat-container');
+            if(container) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 20px;">
+                        <p>Welcome to Aura Pro API Mode 🚀</p>
+                        <p>Chat cleared.</p>
+                    </div>
+                `;
+            }
+        };
+    }
+}, 1000);
+// --- END API MODE --- //
+// --- PANEL RESIZE LOGIC (DRAG EDGE) --- //
+let isResizing = false;
+let currentPanel = null;
+let startX = 0;
+let startWidth = 0;
+
+document.getElementById('webview-container').addEventListener('mousedown', (e) => {
+    // Check if clicking near the right edge of a view-panel
+    const panel = e.target.closest('.view-panel');
+    if (!panel) return;
+
+    const rect = panel.getBoundingClientRect();
+    const edgeSize = 10;
+    
+    // Only allow resizing in 'scroll' layout or if user specifically wants it
+    // Grid and Split layouts have fixed flex logic that might fight with width
+    if (e.clientX > rect.right - edgeSize) {
+        isResizing = true;
+        currentPanel = panel;
+        startX = e.clientX;
+        startWidth = rect.width;
+        document.body.style.cursor = 'col-resize';
+        panel.style.transition = 'none'; // smoother
+        
+        // Show overlay on webviews so they don't eat mouse events
+        Object.values(webviews).forEach(wv => {
+            if(wv) wv.style.pointerEvents = 'none';
+        });
+    }
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isResizing || !currentPanel) return;
+
+    const newWidth = startWidth + (e.clientX - startX);
+    if (newWidth > 200) {
+        // We Use flex-basis for flexibility or just fixed width
+        currentPanel.style.flex = `0 0 ${newWidth}px`;
+        currentPanel.style.width = `${newWidth}px`;
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = 'default';
+        if(currentPanel) currentPanel.style.transition = '';
+        
+        Object.values(webviews).forEach(wv => {
+            if(wv) wv.style.pointerEvents = 'auto';
+        });
+        
+        currentPanel = null;
+    }
+});
+// --- END RESIZE LOGIC --- //
+
+// --- PRO UTILITIES: AI DEBATE --- //
+let isDebating = false;
+
+async function startAIDebate() {
+    if (!settings.useApiMode || !settings.openRouterKey) {
+        showToast("⚠️ AI Debate requires Pro Mode (API) enabled.");
+        return;
+    }
+    
+    const topic = hubInput.value.trim();
+    if (!topic) {
+        showToast("⚠️ Enter a topic in the input box first!");
+        return;
+    }
+
+    isDebating = true;
+    showToast("⚔️ Starting AI Debate on: " + topic);
+    
+    // Switch to API panel to show progress
+    toggleView('api', true);
+    
+    let currentContext = topic;
+    
+    // Basic loop for 3 rounds
+    for (let i = 0; i < 3; i++) {
+        if (!isDebating) break;
+        
+        // Round 1: AI A
+        const promptA = `Topic: ${topic}\nCurrent debate state: ${currentContext}\n\nPlease provide a strong argument/point of view on this topic. Be concise.`;
+        await fetchOpenRouter(promptA);
+        
+        await new Promise(r => setTimeout(r, 4000));
+        
+        // AI B Persona
+        const promptB = `You are a critic debating the following point: \n"${currentContext}"\n\nChallenge this point of view with a counter-argument. Be sharp but respectful.`;
+        await fetchOpenRouter(promptB);
+        
+        await new Promise(r => setTimeout(r, 4000));
+    }
+    
+    isDebating = false;
+    showToast("✅ Debate Finished.");
+}
+
+const btnDebate = document.getElementById('btn-ai-debate');
+if (btnDebate) btnDebate.onclick = startAIDebate;
+
+// --- WORKFLOW CHAIN --- //
+async function startWorkflowChain() {
+    if (!settings.useApiMode || !settings.openRouterKey) {
+        showToast("⚠️ Workflow Chain requires Pro Mode (API).");
+        return;
+    }
+    
+    const input = hubInput.value.trim();
+    if (!input) {
+        showToast("⚠️ Please enter initial data to process.");
+        return;
+    }
+
+    showToast("🔗 Starting Workflow Chain...");
+    toggleView('api', true);
+
+    // Step 1: Analyze
+    const step1 = `Initial Data: ${input}\n\nTask 1: Analyze the key points and list them.`;
+    await fetchOpenRouter(step1);
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Step 2: Refine / Transform
+    const step2 = `Task 2: Based on the previous analysis, write a formal report summary.`;
+    await fetchOpenRouter(step2);
+    
+    showToast("✅ Workflow Chain Completed.");
+}
+
+const btnChain = document.getElementById('btn-workflow-chain');
+if (btnChain) btnChain.onclick = startWorkflowChain;
+// --- END PRO UTILITIES --- //
