@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aura AI | Professional Workspace</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Google Fonts for Premium Look -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <!-- Custom Title Bar -->
     <div class="title-bar">
@@ -26,23 +30,26 @@
             <span class="logo-icon">✨</span>
             <span class="logo-text">Aura <span>AI</span></span>
         </div>
-        
+
         <div class="mode-switcher">
             <h3 class="sidebar-section-title">Workspace</h3>
             <button id="btn-general" class="active" data-mode="general">
-                <span class="icon">🏠</span> 
+                <span class="icon">🏠</span>
                 <span class="label">General</span>
             </button>
-            
+
             <h3 class="sidebar-section-title" style="margin-top: 15px;">🔌 Add-ons</h3>
             <button id="btn-ecommerce" data-mode="ecommerce">
-                <span class="icon">🛒</span> 
+                <span class="icon">🛒</span>
                 <span class="label">E-commerce Pro</span>
             </button>
             <button id="btn-japanese" data-mode="japanese">
-                <span class="icon">⛩️</span> 
+                <span class="icon">⛩️</span>
                 <span class="label">Japanese Tutor</span>
             </button>
+            <div id="community-modes-container" style="display: flex; flex-direction: column; gap: 0;">
+                <!-- Managed by renderer.js -->
+            </div>
             <button id="btn-open-store" class="add-plugin-btn">
                 <span class="icon">➕</span>
                 <span class="label">Get More...</span>
@@ -51,11 +58,11 @@
             <div id="pro-utilities" style="display: none; flex-direction: column; gap: 10px; margin-top: 15px;">
                 <h3 class="pro-utilities-title">🌟 Pro Utilities</h3>
                 <button id="btn-ai-debate">
-                    <span class="icon">⚔️</span> 
+                    <span class="icon">⚔️</span>
                     <span class="label">AI Debate</span>
                 </button>
                 <button id="btn-workflow-chain">
-                    <span class="icon">🔗</span> 
+                    <span class="icon">🔗</span>
                     <span class="label">Workflow Chain</span>
                 </button>
             </div>
@@ -64,11 +71,17 @@
         <!-- Prompt Library / プロンプト集 (Prompt-shuu) - คลังคำสั่ง -->
         <div class="prompt-library">
             <button id="btn-screenshot" class="special-btn">📸 Screenshot & Analyze</button>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="prompt-section-header">
                 <h3 title="Right-click any prompt to Edit/Delete">📖 Prompt Library</h3>
                 <div>
-                    <button id="btn-open-community" title="Community Prompts" style="background:transparent; border:none; color:var(--text-main); font-size:1.1rem; cursor:pointer; margin-right: 5px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">🌍</button>
-                    <button id="btn-add-prompt" title="Add Custom Prompt" style="background:transparent; border:none; color:var(--text-main); font-size:1.2rem; cursor:pointer;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">⊕</button>
+                    <button id="btn-open-community" title="Community Prompts"
+                        style="background:transparent; border:none; color:var(--text-main); font-size:1.1rem; cursor:pointer; margin-right: 5px;"
+                        onmouseover="this.style.color='var(--accent)'"
+                        onmouseout="this.style.color='var(--text-main)'">🌍</button>
+                    <button id="btn-add-prompt" title="Add Custom Prompt"
+                        style="background:transparent; border:none; color:var(--text-main); font-size:1.2rem; cursor:pointer;"
+                        onmouseover="this.style.color='var(--accent)'"
+                        onmouseout="this.style.color='var(--text-main)'">⊕</button>
                 </div>
             </div>
             <div id="prompt-list" class="prompt-list">
@@ -76,18 +89,21 @@
             </div>
         </div>
 
-        <div class="sidebar-footer" style="padding: 10px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
+        <div class="sidebar-footer"
+            style="padding: 10px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
             <div class="footer-icons" style="display: flex; justify-content: space-around; align-items: center;">
                 <button id="btn-theme-toggle" class="icon-only-btn" title="Toggle Theme">🌙</button>
                 <button id="btn-settings" class="icon-only-btn" title="Settings">⚙️</button>
                 <button id="btn-logout" class="icon-only-btn" title="Sign Out" style="color: #ef4444;">🚪</button>
             </div>
-            
-            <div class="window-controls" style="font-size: 0.75rem; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 6px;">
+
+            <div class="window-controls"
+                style="font-size: 0.75rem; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 6px;">
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" id="chk-on-top" style="scale: 0.8;"> 📌
                 </label>
-                <input type="range" id="rng-opacity" min="0.3" max="1" step="0.1" value="1" style="flex: 1; height: 4px;">
+                <input type="range" id="rng-opacity" min="0.3" max="1" step="0.1" value="1"
+                    style="flex: 1; height: 4px;">
             </div>
         </div>
     </nav>
@@ -97,7 +113,8 @@
         <!-- Smart Hub: Top Bar for Quick Commands -->
         <header class="smart-hub">
             <div class="input-container">
-                <button id="btn-toggle-sidebar" class="hub-select" style="padding: 0 15px; font-weight: bold;" title="Toggle Sidebar (Ctrl+G)">☰</button>
+                <button id="btn-toggle-sidebar" class="hub-select" style="padding: 0 15px; font-weight: bold;"
+                    title="Toggle Sidebar (Ctrl+G)">☰</button>
                 <select id="hub-ai-selector" class="hub-select">
                     <option value="gemini">Gemini</option>
                     <option value="chatgpt">ChatGPT</option>
@@ -105,20 +122,23 @@
                     <option value="deepseek">DeepSeek</option>
                     <option value="api">🌟 Aura Pro</option>
                 </select>
-                <input type="text" id="hub-input" placeholder="Type prompt here... (Ctrl+H to send)" title="Shortcut: Ctrl+H (Send to single), Ctrl+Shift+H (Broadcast)">
+                <input type="text" id="hub-input" placeholder="Type prompt here... (Ctrl+H to send)"
+                    title="Shortcut: Ctrl+H (Send to single), Ctrl+Shift+H (Broadcast)">
                 <button id="btn-send-raw" title="Send (Ctrl+H)">🚀 Send</button>
-                <button id="btn-broadcast" title="Broadcast to ALL (Ctrl+Shift+H)" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢 Broadcast</button>
+                <button id="btn-broadcast" title="Broadcast to ALL (Ctrl+Shift+H)"
+                    style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢
+                    Broadcast</button>
             </div>
             <div id="quick-chips" class="quick-chips">
                 <!-- Chips injected by renderer.js -->
             </div>
-            
+
             <div class="ai-toggles" id="ai-toggles-container">
                 <span class="toggles-label">Views:</span>
                 <div id="dynamic-toggles" style="display:flex; gap:8px;">
                     <!-- Toggles injected dynamically by renderer.js -->
                 </div>
-                
+
                 <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
                     <span class="toggles-label">Layout:</span>
                     <select id="layout-style" class="hub-select" style="padding: 2px 8px; font-size: 0.8rem;">
@@ -135,10 +155,12 @@
             <div class="dashboard-panel" id="panel-dashboard">
                 <div class="dash-logo">✨</div>
                 <h1 class="dash-title">Aura AI Workspace</h1>
-                <p class="dash-subtitle">Your unified intelligent hub for deep work, coding, and creative translation.</p>
-                
+                <p class="dash-subtitle">Your unified intelligent hub for deep work, coding, and creative translation.
+                </p>
+
                 <div class="dash-grid">
-                    <div class="dash-card" onclick="document.getElementById('hub-ai-selector').value='api'; document.dispatchEvent(new Event('change', {bubbles:true}));">
+                    <div class="dash-card"
+                        onclick="document.getElementById('hub-ai-selector').value='api'; document.dispatchEvent(new Event('change', {bubbles:true}));">
                         <i>🚀</i>
                         <h3>Pro Mode</h3>
                         <p>Access high-end LLMs directly via OpenRouter API.</p>
@@ -153,6 +175,13 @@
                         <h3>AI Workflow</h3>
                         <p>Chain multiple prompts to automate complex tasks.</p>
                     </div>
+                </div>
+
+                <div class="dash-shortcuts"
+                    style="margin-top: 40px; display: flex; gap: 20px; font-size: 0.8rem; color: rgba(255,255,255,0.4);">
+                    <span>⌨️ <b>Ctrl + H</b> : Send Prompt</span>
+                    <span>⌨️ <b>Ctrl + Shift + H</b> : Broadcast All</span>
+                    <span>⌨️ <b>Ctrl + G</b> : Toggle Sidebar</span>
                 </div>
             </div>
 
@@ -259,7 +288,8 @@
                         <span class="view-title" style="color: #fbbf24;">🌟 Aura Pro (API)</span>
                     </div>
                     <div class="view-actions">
-                        <select id="api-model-selector" class="hub-select" style="max-width: 180px; background: rgba(255,215,0,0.1); border: 1px solid #fbbf24; color: #fbbf24;">
+                        <select id="api-model-selector" class="hub-select"
+                            style="max-width: 180px; background: rgba(255,215,0,0.1); border: 1px solid #fbbf24; color: #fbbf24;">
                             <optgroup label="🔥 Top Tier (Paid)">
                                 <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
                                 <option value="openai/gpt-4o-mini">GPT-4o Mini (Cheap)</option>
@@ -281,7 +311,8 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <div id="api-chat-container" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-dark);">
+                <div id="api-chat-container"
+                    style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-dark);">
                     <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 20px;">
                         <p>Welcome to Aura Pro API Mode 🚀</p>
                         <p>Messages sent while this panel is active will appear here instantly.</p>
@@ -317,7 +348,7 @@
                 <h2>⚙️ Aura AI Settings</h2>
                 <button id="btn-close-settings">✕</button>
             </header>
-            
+
             <div class="settings-content">
                 <!-- Profile Section -->
                 <section>
@@ -325,42 +356,54 @@
                     <div class="setting-item">
                         <label>Display Username</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="set-username" placeholder="Choose a username..." style="flex-grow: 1;">
-                            <button id="btn-update-username" style="background: var(--accent); border: none; padding: 5px 10px; border-radius: 5px; color: white; cursor: pointer; font-size: 0.8rem;">Update</button>
+                            <input type="text" id="set-username" placeholder="Choose a username..."
+                                style="flex-grow: 1;">
+                            <button id="btn-update-username"
+                                style="background: var(--accent); border: none; padding: 5px 10px; border-radius: 5px; color: white; cursor: pointer; font-size: 0.8rem;">Update</button>
                         </div>
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*Used for login (Email or Username).</p>
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*Used for login
+                            (Email or Username).</p>
                     </div>
                     <div class="setting-item" style="margin-top: 15px;">
                         <label>Community Alias (Optional)</label>
-                        <input type="text" id="set-alias" placeholder="e.g. Secret Master, Anonymous..." style="width: 100%;">
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*This name will be shown on your shared prompts and add-ons.</p>
+                        <input type="text" id="set-alias" placeholder="e.g. Secret Master, Anonymous..."
+                            style="width: 100%;">
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*This name will be
+                            shown on your shared prompts and add-ons.</p>
                     </div>
                 </section>
 
-                <!-- AI Providers -->
+                <!-- AI Visibility Control -->
                 <section>
-                    <h3>🤖 AI Providers (Webview Mode)</h3>
-                    <div class="ai-grid">
-                        <label class="ai-item"><input type="radio" name="ai-provider" value="gemini" checked> Gemini</label>
-                        <label class="ai-item"><input type="radio" name="ai-provider" value="chatgpt"> ChatGPT</label>
-                        <label class="ai-item"><input type="radio" name="ai-provider" value="claude"> Claude</label>
-                        <label class="ai-item"><input type="radio" name="ai-provider" value="deepseek"> DeepSeek</label>
+                    <h3>🤖 UI Layout: Toggle AI Panels</h3>
+                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 10px; margin-top: -5px;">Select which AI panels you want visible in this workspace.</p>
+                    <div class="checkbox-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label><input type="checkbox" id="set-show-gemini" checked> Gemini</label>
+                        <label><input type="checkbox" id="set-show-chatgpt" checked> ChatGPT</label>
+                        <label><input type="checkbox" id="set-show-claude" checked> Claude</label>
+                        <label><input type="checkbox" id="set-show-deepseek" checked> DeepSeek</label>
+                        <label><input type="checkbox" id="set-show-leonardo" checked> Leonardo AI</label>
                     </div>
                 </section>
-                
+
                 <!-- OpenRouter (Pro Mode) -->
-                <section style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); padding: 10px; border-radius: 8px;">
+                <section
+                    style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); padding: 10px; border-radius: 8px;">
                     <h3 style="color: #fbbf24;">🌟 Aura AI Pro (API Mode)</h3>
                     <div class="setting-item">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <label>OpenRouter API Key</label>
-                            <a href="https://openrouter.ai/keys" target="_blank" style="font-size: 0.8rem; color: #fbbf24; text-decoration: none; display: flex; align-items: center; gap: 4px;" title="Get your API key">🔑 Get API Key ↗</a>
+                            <a href="https://openrouter.ai/keys" target="_blank"
+                                style="font-size: 0.8rem; color: #fbbf24; text-decoration: none; display: flex; align-items: center; gap: 4px;"
+                                title="Get your API key">🔑 Get API Key ↗</a>
                         </div>
                         <input type="password" id="set-openrouter-key" placeholder="sk-or-v1-..." style="width: 100%;">
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 5px;">*Enable API mode for AI Debate, Workflow Chain, and Compare features.</p>
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 5px;">*Enable API mode
+                            for AI Debate, Workflow Chain, and Compare features.</p>
                     </div>
                     <div class="setting-item" style="margin-top: 10px;">
-                        <label><input type="checkbox" id="set-use-api-mode"> Enable Pro Mode (Use API instead of Webview)</label>
+                        <label><input type="checkbox" id="set-use-api-mode"> Enable Pro Mode (Use API instead of
+                            Webview)</label>
                     </div>
                 </section>
 
@@ -414,31 +457,44 @@
                 <!-- Keyboard Shortcuts Reference -->
                 <section>
                     <h3>⌨️ Keyboard Shortcuts</h3>
-                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid var(--glass-border); font-size: 0.85rem;">
+                    <div
+                        style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid var(--glass-border); font-size: 0.85rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Send Prompt (Active)</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘ + H</kbd>
+                            <kbd
+                                style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘
+                                + H</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Broadcast (All)</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘+Shift+H</kbd>
+                            <kbd
+                                style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘+Shift+H</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: rgba(255,255,255,0.6);">Toggle Sidebar</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘ + G</kbd>
+                            <kbd
+                                style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Ctrl/⌘
+                                + G</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                             <span style="color: rgba(255,255,255,0.6);">Close Modals</span>
-                            <kbd style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Esc</kbd>
+                            <kbd
+                                style="background: #444; border: 1px solid #666; padding: 2px 6px; border-radius: 4px;">Esc</kbd>
                         </div>
                         <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-                            <span style="color: var(--accent); font-weight: bold; font-size: 0.9rem;">💡 Pro Trick:</span><br>
-                            <span style="color: rgba(255,255,255,0.7); display: inline-block; margin-top: 5px;">Hold <kbd style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Shift</kbd> + <kbd style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Scroll Wheel</kbd>&nbsp; to scroll AI panels sideways!</span>
+                            <span style="color: var(--accent); font-weight: bold; font-size: 0.9rem;">💡 Pro
+                                Trick:</span><br>
+                            <span style="color: rgba(255,255,255,0.7); display: inline-block; margin-top: 5px;">Hold
+                                <kbd
+                                    style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Shift</kbd>
+                                + <kbd
+                                    style="background: #333; padding: 2px 5px; border-radius: 3px; border: 1px solid #555;">Scroll
+                                    Wheel</kbd>&nbsp; to scroll AI panels sideways!</span>
                         </div>
                     </div>
                 </section>
             </div>
-            
+
             <footer>
                 <button id="btn-save-settings">💾 Save Changes</button>
             </footer>
@@ -452,23 +508,30 @@
                 <h2 id="prompt-modal-title">✨ Add New Prompt</h2>
                 <button id="btn-close-prompt">✕</button>
             </header>
-            
+
             <div class="settings-content">
                 <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 5px;">
                     <label>Label</label>
                     <input type="text" id="prompt-label" placeholder="e.g. 📝 My Prompt">
                 </div>
-                <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 5px; margin-top: 15px;">
+                <div class="setting-item"
+                    style="flex-direction: column; align-items: stretch; gap: 5px; margin-top: 15px;">
                     <label>Content Text</label>
-                    <textarea id="prompt-text" rows="4" placeholder="e.g. Please analyze this text:\n[YOUR TOPIC]" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 8px; border-radius: 5px; color: white; resize: vertical; width: 100%; box-sizing: border-box;"></textarea>
-                    <small style="color:rgba(255,255,255,0.5);">Tip: Replaceable keywords like [YOUR TOPIC] work automatically.</small>
+                    <textarea id="prompt-text" rows="4" placeholder="e.g. Please analyze this text:\n[YOUR TOPIC]"
+                        style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 8px; border-radius: 5px; color: white; resize: vertical; width: 100%; box-sizing: border-box;"></textarea>
+                    <small style="color:rgba(255,255,255,0.5);">Tip: Replaceable keywords like [YOUR TOPIC] work
+                        automatically.</small>
                 </div>
             </div>
-            
+
             <footer style="display: flex; justify-content: space-between;">
-                <button id="btn-delete-prompt" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); display: none;">🗑️ Delete</button>
+                <button id="btn-delete-prompt"
+                    style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); display: none;">🗑️
+                    Delete</button>
                 <div style="margin-left: auto; display: flex; gap: 10px;">
-                    <button id="btn-share-prompt" style="background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.5); display: none;">🌍 Share to World</button>
+                    <button id="btn-share-prompt"
+                        style="background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.5); display: none;">🌍
+                        Share to World</button>
                     <button id="btn-save-prompt">💾 Save</button>
                 </div>
             </footer>
@@ -480,49 +543,66 @@
         <div class="settings-modal" style="width: 500px;">
             <header>
                 <h2>🛒 Add-on Store</h2>
-                <button id="btn-close-store" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+                <button id="btn-close-store"
+                    style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
             </header>
-            
+
             <div class="settings-content" style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <p style="margin: 0; color:rgba(255,255,255,0.7);">Expand your AI capabilities with add-ons.</p>
-                    <button id="btn-open-create-addon" style="background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">✨ Create Add-on</button>
+                    <button id="btn-open-create-addon"
+                        style="background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">✨
+                        Create Add-on</button>
                 </div>
-                
-                <h4 style="margin: 0 0 10px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">Official Add-ons</h4>
+
+                <h4
+                    style="margin: 0 0 10px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">
+                    Official Add-ons</h4>
                 <!-- Store Item 1 -->
-                <div class="store-item" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="store-item"
+                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3 style="margin: 0 0 5px 0;">🛒 E-commerce Pro</h3>
-                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with Leonardo AI and prompts for product descriptions.</p>
+                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with
+                            Leonardo AI and prompts for product descriptions.</p>
                     </div>
-                    <button class="store-btn-install" data-addon="ecommerce" style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
+                    <button class="store-btn-install" data-addon="ecommerce"
+                        style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
                 </div>
 
                 <!-- Store Item 2 -->
-                <div class="store-item" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="store-item"
+                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3 style="margin: 0 0 5px 0;">⛩️ Japanese Tutor</h3>
-                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with Claude and prompts for language learning.</p>
+                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with
+                            Claude and prompts for language learning.</p>
                     </div>
-                    <button class="store-btn-install" data-addon="japanese" style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
+                    <button class="store-btn-install" data-addon="japanese"
+                        style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
                 </div>
 
                 <div style="margin-top: 30px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="margin: 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">🌍 Community Add-ons</h4>
-                        <input type="text" id="search-community-addons" placeholder="🔍 Search add-ons..." style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; border-radius: 5px; color: white; font-size: 0.75rem; width: 150px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4
+                            style="margin: 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">
+                            🌍 Community Add-ons</h4>
+                        <input type="text" id="search-community-addons" placeholder="🔍 Search add-ons..."
+                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; border-radius: 5px; color: white; font-size: 0.75rem; width: 150px;">
                     </div>
                     <div id="community-addon-list" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+                        <div
+                            style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
                             Loading community add-ons...
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <footer style="display: flex; justify-content: flex-end;">
-                <button id="btn-done-store" style="background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Done</button>
+                <button id="btn-done-store"
+                    style="background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Done</button>
             </footer>
         </div>
     </div>
@@ -532,19 +612,62 @@
         <div class="settings-modal" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
             <header>
                 <h2>🌍 Community Prompts</h2>
-                <button id="btn-close-community" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+                <button id="btn-close-community"
+                    style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
             </header>
-            
+
             <div class="settings-content" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
                 <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-                    <input type="text" id="search-community-prompts" placeholder="🔍 Search prompts..." style="flex-grow: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; color: white; font-size: 0.9rem;">
-                    <button id="btn-refresh-community" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;">🔄 Refresh</button>
+                    <input type="text" id="search-community-prompts" placeholder="🔍 Search prompts..."
+                        style="flex-grow: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; color: white; font-size: 0.9rem;">
+                    <button id="btn-refresh-community"
+                        style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;">🔄
+                        Refresh</button>
                 </div>
-                
-                <div id="community-list" style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto;">
-                    <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Loading prompts...</div>
+
+                <div id="community-list"
+                    style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto;">
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Loading prompts...
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Create Add-on Overlay -->
+    <div id="create-addon-overlay" class="overlay flex-center hidden" style="z-index: 10003;">
+        <div class="settings-modal" style="width: 450px;">
+            <header>
+                <h2 id="create-modal-title">✨ Create Workspace</h2>
+                <button id="btn-close-create-addon"
+                    style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+            </header>
+            <div class="settings-content" style="padding: 20px;">
+                <div class="setting-item">
+                    <label>Workspace Name</label>
+                    <input type="text" id="addon-name" placeholder="e.g. My Writing Assistant">
+                </div>
+                <div class="setting-item">
+                    <label>Emoji Icon</label>
+                    <input type="text" id="addon-emoji" placeholder="🖋️" maxlength="5">
+                </div>
+                <div class="setting-item">
+                    <label>Description</label>
+                    <textarea id="addon-desc" placeholder="What is this workspace for?"
+                        style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white; padding: 10px; resize: none;"></textarea>
+                </div>
+                <div class="setting-item"
+                    style="display: flex; align-items: center; gap: 10px; background: rgba(56, 189, 248, 0.1); padding: 10px; border-radius: 8px;">
+                    <input type="checkbox" id="chk-publish-public" checked>
+                    <label for="chk-publish-public" style="margin: 0; font-size: 0.85rem; cursor: pointer;">🌍
+                        Share with Community</label>
+                </div>
+                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*Will save your
+                    current AI view & prompts as the template.</p>
+            </div>
+            <footer>
+                <button id="btn-publish-addon">🌍 Create & Save</button>
+            </footer>
         </div>
     </div>
 
@@ -553,7 +676,7 @@
         <div class="auth-modal">
             <h2 id="auth-title">Welcome to Aura AI</h2>
             <p class="auth-subtitle">Log in to unleash your personalized workspace.</p>
-            
+
             <div id="auth-error" class="auth-error hidden"></div>
 
             <form id="auth-form">
@@ -569,69 +692,62 @@
                     <label>Password</label>
                     <input type="password" id="auth-password" placeholder="••••••••" required>
                 </div>
-                
+
                 <div style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
-                    <button type="button" id="btn-forgot-password" style="background:none; border:none; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; padding: 5px;">Forgot Password?</button>
+                    <button type="button" id="btn-forgot-password"
+                        style="background:none; border:none; color: rgba(255,255,255,0.5); font-size: 0.8rem; cursor: pointer; padding: 5px;">Forgot
+                        Password?</button>
                 </div>
-                
+
                 <button type="submit" id="btn-auth-submit" class="auth-btn-primary">Sign In</button>
             </form>
 
-            <div id="verify-email-section" class="hidden" style="margin-top: 20px; text-align: center; border: 1px dashed var(--accent); padding: 15px; border-radius: 8px;">
-                <p style="font-size: 0.9rem; color: var(--accent); margin-bottom: 10px;">📧 Please verify your email!</p>
-                <p style="font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-bottom: 15px;">We've sent a link to your email. Please check your inbox (and spam folder).</p>
-                <button id="btn-resend-verification" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Resend Email</button>
+            <div id="verify-email-section" class="hidden"
+                style="margin-top: 20px; text-align: center; border: 1px dashed var(--accent); padding: 15px; border-radius: 8px;">
+                <p style="font-size: 0.9rem; color: var(--accent); margin-bottom: 10px;">📧 Please verify your email!
+                </p>
+                <p style="font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-bottom: 15px;">We've sent a link to
+                    your email. Please check your inbox (and spam folder).</p>
+                <button id="btn-resend-verification"
+                    style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Resend
+                    Email</button>
+                <div style="margin-top: 10px;">
+                    <button id="btn-cancel-verify"
+                        style="background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 0.75rem;">Try
+                        another account / Sign Out</button>
+                </div>
             </div>
 
-            <div id="auth-google-section" class="hidden">
+            <div id="auth-google-section">
                 <div class="auth-divider"><span>OR</span></div>
                 <button id="btn-auth-google" class="auth-btn-google">
-                    <svg viewBox="0 0 48 48" class="google-icon"><title>Google Logo</title><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    <svg viewBox="0 0 48 48" class="google-icon">
+                        <title>Google Logo</title>
+                        <path fill="#EA4335"
+                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4"
+                            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05"
+                            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853"
+                            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                    </svg>
                     Sign in with Google
                 </button>
             </div>
 
             <p class="auth-toggle-text">
-                <span id="auth-toggle-message">Don't have an account?</span> 
+                <span id="auth-toggle-message">Don't have an account?</span>
                 <a href="#" id="auth-toggle-link">Sign Up</a>
             </p>
         </div>
     </div>
 
-    <!-- Create Add-on Overlay -->
-    <div id="create-addon-overlay" class="overlay flex-center hidden" style="z-index: 10005;">
-        <div class="settings-modal" style="width: 450px;">
-            <header>
-                <h2>✨ Create Community Add-on</h2>
-                <button id="btn-close-create-addon" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
-            </header>
-            <div class="settings-content" style="padding: 20px;">
-                <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 20px;">
-                    This will package your <b>current visible panels</b> and <b>all current prompts</b> into a shareable add-on.
-                </p>
-                
-                <div class="auth-input-group">
-                    <label>Add-on Name</label>
-                    <input type="text" id="addon-name" placeholder="e.g. Content Writer Pro">
-                </div>
-                <div class="auth-input-group">
-                    <label>Emoji Icon</label>
-                    <input type="text" id="addon-emoji" placeholder="e.g. ✍️" maxlength="2">
-                </div>
-                <div class="auth-input-group">
-                    <label>Description</label>
-                    <textarea id="addon-desc" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; padding: 10px; height: 80px; resize: none;" placeholder="What does this add-on do?"></textarea>
-                </div>
-            </div>
-            <footer style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button id="btn-publish-addon" class="auth-btn-primary">🌍 Publish to Store</button>
-            </footer>
-        </div>
-    </div>
 
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
     <script type="module" src="renderer.js"></script>
 </body>
+
 </html>

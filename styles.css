@@ -162,8 +162,9 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 .mode-switcher {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    flex-grow: 1;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-shrink: 0; /* Don't squash workspace icons */
 }
 
 .mode-switcher button {
@@ -193,6 +194,9 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 .hide-addon {
     display: none !important;
 }
+
+.edit-addon:hover { color: var(--accent) !important; }
+.delete-addon:hover { color: #ef4444 !important; }
 
 .pro-utilities-title {
     font-size: 0.75rem;
@@ -247,12 +251,20 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
     flex-direction: column;
     z-index: 1000;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.1) transparent;
+    overflow-x: hidden;
 }
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
 
 .sidebar-footer {
     margin-top: auto;
@@ -285,14 +297,17 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 .prompt-library-header {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+    padding-bottom: 10px;
 }
 
 .prompt-library {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--glass-border);
+    flex-shrink: 0; /* Keep it fixed-size or growing slightly */
 }
 
 .prompt-library > div:first-of-type {
@@ -301,8 +316,10 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 }
 
 .prompt-list {
-    flex: 1;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .sidebar-footer > button {
@@ -343,11 +360,14 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 
 
 /* Prompt Library Styles */
-.prompt-library {
-    margin-top: 30px;
-    flex-grow: 1;
-    overflow-y: auto;
+/* Consolidated Prompt Library section header */
+.prompt-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
 }
+
 
 /* Scrollbar tweaks for sidebar */
 .prompt-library::-webkit-scrollbar {
@@ -387,16 +407,17 @@ button, .chip, .prompt-item, .nav-item, input, select, textarea {
 
 .special-btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     background: linear-gradient(135deg, #6366f1, #a855f7);
     border: none;
     border-radius: 8px;
     color: white;
     font-weight: 600;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
     transition: transform 0.2s;
+    flex-shrink: 0;
 }
 
 .special-btn:hover {
@@ -1306,9 +1327,9 @@ body.light-mode .ai-msg .msg-content {
     to { transform: translateX(120%) scale(0.9); opacity: 0; }
 }
 
-/* Simple Premium Tooltip style hint */
+/* Cursor Fix: Restore default for title tags */
 [title] {
-    cursor: help;
+    cursor: default;
 }
 
 /* Smooth transition for main view transitions */
