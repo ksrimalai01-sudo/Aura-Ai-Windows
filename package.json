@@ -21,6 +21,9 @@
     "electron-updater": "^6.8.3",
     "firebase": "^12.10.0"
   },
+  "overrides": {
+    "yauzl": "^3.2.1"
+  },
   "build": {
     "appId": "com.aura.ai",
     "directories": {
