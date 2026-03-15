@@ -208,9 +208,12 @@ function showToast(message) {
     toast.className = 'toast';
     toast.innerHTML = message.replace(/\n/g, '<br>');
     container.appendChild(toast);
+    
+    // Auto remove with animation
     setTimeout(() => {
-        if (toast.parentNode) toast.remove();
-    }, 3000);
+        toast.style.animation = 'toastOut 0.5s forwards';
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 500);
+    }, 3500);
 }
 
 const webviews = {
@@ -229,7 +232,8 @@ const panels = {
     deepseek: document.getElementById('panel-deepseek'),
     leonardo: document.getElementById('panel-leonardo'),
     api: document.getElementById('panel-api'),
-    custom: document.getElementById('panel-custom')
+    custom: document.getElementById('panel-custom'),
+    dashboard: document.getElementById('panel-dashboard')
 };
 
 // --- Add event listeners for webview loading states (Status Indicator) ---
@@ -263,9 +267,17 @@ function toggleView(provider, show) {
     if (show) {
         panel.classList.remove('hidden');
         if (btn) btn.classList.add('active');
+        // Hide dashboard if any panel is shown
+        if (panels.dashboard) panels.dashboard.classList.add('hidden');
     } else {
         panel.classList.add('hidden');
         if (btn) btn.classList.remove('active');
+        
+        // Check if all panels are hidden, if so show dashboard
+        const anyVisible = Object.entries(panels).some(([id, p]) => id !== 'dashboard' && p && !p.classList.contains('hidden'));
+        if (!anyVisible && panels.dashboard) {
+            panels.dashboard.classList.remove('hidden');
+        }
     }
 }
 
@@ -368,14 +380,14 @@ document.getElementById('webview-container').addEventListener('click', (e) => {
         }
     } else if (btn.classList.contains('btn-copy-response')) {
         const wv = webviews[provider];
-        if (id === 'api') {
+        if (provider === 'api') {
             const container = document.getElementById('api-chat-container');
-            const msgs = container.querySelectorAll('div');
+            const msgs = container.querySelectorAll('.msg-content');
             if (msgs.length > 0) {
-                const lastAiMsg = Array.from(msgs).reverse().find(m => m.style.alignSelf === 'flex-start');
+                const lastAiMsg = Array.from(msgs).reverse().find(m => m.parentNode.classList.contains('ai-msg'));
                 if (lastAiMsg) {
                     navigator.clipboard.writeText(lastAiMsg.innerText);
-                    showToast("📋 Response copied to clipboard!");
+                    showToast("📋 API Response copied!");
                 }
             }
             return;

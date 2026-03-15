@@ -24,7 +24,7 @@
     <nav class="sidebar">
         <div class="logo">
             <span class="logo-icon">✨</span>
-            <span class="logo-text">Aura AI</span>
+            <span class="logo-text">Aura <span>AI</span></span>
         </div>
         
         <div class="mode-switcher">
@@ -49,7 +49,7 @@
             </button>
 
             <div id="pro-utilities" style="display: none; flex-direction: column; gap: 10px; margin-top: 15px;">
-                <h3 class="sidebar-section-title">🌟 Pro Utilities</h3>
+                <h3 class="pro-utilities-title">🌟 Pro Utilities</h3>
                 <button id="btn-ai-debate">
                     <span class="icon">⚔️</span> 
                     <span class="label">AI Debate</span>
@@ -131,6 +131,31 @@
         </header>
 
         <div class="webview-stack" id="webview-container">
+            <!-- Aura Dashboard (Empty State) -->
+            <div class="dashboard-panel" id="panel-dashboard">
+                <div class="dash-logo">✨</div>
+                <h1 class="dash-title">Aura AI Workspace</h1>
+                <p class="dash-subtitle">Your unified intelligent hub for deep work, coding, and creative translation.</p>
+                
+                <div class="dash-grid">
+                    <div class="dash-card" onclick="document.getElementById('hub-ai-selector').value='api'; document.dispatchEvent(new Event('change', {bubbles:true}));">
+                        <i>🚀</i>
+                        <h3>Pro Mode</h3>
+                        <p>Access high-end LLMs directly via OpenRouter API.</p>
+                    </div>
+                    <div class="dash-card" onclick="document.getElementById('btn-ai-debate').click();">
+                        <i>⚔️</i>
+                        <h3>AI Debate</h3>
+                        <p>Watch multiple AIs debate a topic to find the best truth.</p>
+                    </div>
+                    <div class="dash-card" onclick="document.getElementById('btn-workflow-chain').click();">
+                        <i>🔗</i>
+                        <h3>AI Workflow</h3>
+                        <p>Chain multiple prompts to automate complex tasks.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Webviews -->
             <div class="view-panel" id="panel-gemini" data-id="gemini">
                 <div class="view-header">
