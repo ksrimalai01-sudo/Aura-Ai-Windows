@@ -7,6 +7,7 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "run:unpacked": "npm run dist && start dist\\win-unpacked\\\"Aura AI.exe\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -30,15 +31,18 @@
       "buildResources": "build"
     },
     "productName": "Aura AI",
+    "icon": "assets/icon.png",
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "assets/icon.png"
     },
     "mac": {
       "target": [
         "dmg"
       ],
+      "icon": "assets/icon.png",
       "category": "public.app-category.productivity"
     },
     "nsis": {

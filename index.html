@@ -202,7 +202,8 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
+                <webview id="wv-gemini" src="https://gemini.google.com" partition="persist:gemini" allowpopups>
+                </webview>
             </div>
 
             <div class="view-panel hidden" id="panel-chatgpt" data-id="chatgpt">
@@ -221,7 +222,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-chatgpt" src="https://chatgpt.com" partition="persist:chatgpt"></webview>
+                <webview id="wv-chatgpt" src="https://chatgpt.com" partition="persist:chatgpt" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-claude" data-id="claude">
@@ -240,7 +241,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-claude" src="https://claude.ai" partition="persist:claude"></webview>
+                <webview id="wv-claude" src="https://claude.ai" partition="persist:claude" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-deepseek" data-id="deepseek">
@@ -259,7 +260,8 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-deepseek" src="https://chat.deepseek.com" partition="persist:deepseek"></webview>
+                <webview id="wv-deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" allowpopups>
+                </webview>
             </div>
 
             <div class="view-panel hidden" id="panel-leonardo" data-id="leonardo">
@@ -278,7 +280,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-leonardo" src="https://leonardo.ai" partition="persist:leonardo"></webview>
+                <webview id="wv-leonardo" src="https://leonardo.ai" partition="persist:leonardo" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-api" data-id="api">
@@ -336,7 +338,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-custom" src="about:blank" partition="persist:custom"></webview>
+                <webview id="wv-custom" src="about:blank" partition="persist:custom" allowpopups></webview>
             </div>
         </div>
     </main>
@@ -376,7 +378,8 @@
                 <!-- AI Visibility Control -->
                 <section>
                     <h3>🤖 UI Layout: Toggle AI Panels</h3>
-                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 10px; margin-top: -5px;">Select which AI panels you want visible in this workspace.</p>
+                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 10px; margin-top: -5px;">
+                        Select which AI panels you want visible in this workspace.</p>
                     <div class="checkbox-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <label><input type="checkbox" id="set-show-gemini" checked> Gemini</label>
                         <label><input type="checkbox" id="set-show-chatgpt" checked> ChatGPT</label>
@@ -436,6 +439,17 @@
                         <label><input type="checkbox" id="set-show-ecommerce"> Show E-commerce Pro Add-on</label>
                         <label><input type="checkbox" id="set-show-japanese"> Show Japanese Tutor Add-on</label>
                     </div>
+                </section>
+
+                <!-- Updates -->
+                <section>
+                    <h3>⬆️ Updates</h3>
+                    <div class="setting-item" style="display: flex; align-items: center; gap: 10px;">
+                        <button id="btn-check-updates" style="background: var(--accent); border: none; padding: 8px 14px; border-radius: 6px; color: white; cursor: pointer; font-size: 0.9rem;">Check for Updates</button>
+                        <span id="current-version" style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">v1.1.0</span>
+                    </div>
+                    <div id="update-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 6px; min-height: 1.2em;"></div>
+                    <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5);">Update is checked automatically when the app starts.</p>
                 </section>
 
                 <!-- Custom AI -->

@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
         if (validChannels.includes(channel)) {
             ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
-    }
+    },
+    getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

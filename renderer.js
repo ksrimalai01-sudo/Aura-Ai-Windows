@@ -195,6 +195,12 @@ if (btnCancelVerify) {
 }
 
 if (authGoogleBtn) {
+    // Google login isn't supported in this embedded Electron build due to OAuth domain restrictions.
+    // Hide the button until a proper integration (e.g., custom OAuth flow) is added.
+    authGoogleBtn.style.display = 'none';
+
+    // If you later want to re-enable it, remove the above line and uncomment the block below.
+    /*
     authGoogleBtn.onclick = async () => {
         const provider = new GoogleAuthProvider();
         if (authError) authError.classList.add('hidden');
@@ -204,6 +210,7 @@ if (authGoogleBtn) {
             showError(error.message.replace('Firebase: ', ''));
         }
     };
+    */
 }
 
 // Sidebar Logout
@@ -246,6 +253,16 @@ onAuthStateChanged(auth, async (user) => {
 
         // Initialize App Setup only after login
         loadSettings();
+        if (window.electronAPI && window.electronAPI.getAppVersion) {
+            const versionEl = document.getElementById('current-version');
+            if (versionEl) {
+                window.electronAPI.getAppVersion().then(v => {
+                    versionEl.innerText = `v${v}`;
+                }).catch(() => {
+                    // ignore
+                });
+            }
+        }
         switchMode(settings.currentMode || 'general');
     } else {
         // User is signed out
@@ -276,9 +293,17 @@ const communityAddonList = document.getElementById('community-addon-list');
 function showToast(message) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+
+    // Keep screen clean: only show one toast at a time
+    while (container.firstChild) container.removeChild(container.firstChild);
+
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = message.replace(/\n/g, '<br>');
+
+    // Limit message length to avoid overflowing the screen
+    const maxLen = 160;
+    const safeMsg = (typeof message === 'string' ? message : String(message)).trim();
+    toast.innerHTML = (safeMsg.length > maxLen ? safeMsg.slice(0, maxLen) + '…' : safeMsg).replace(/\n/g, '<br>');
     container.appendChild(toast);
 
     // Auto remove with animation
@@ -1228,6 +1253,21 @@ if (btnSettingsConsolidated) {
     };
 }
 
+const btnCheckUpdates = document.getElementById('btn-check-updates');
+if (btnCheckUpdates) {
+    btnCheckUpdates.onclick = () => {
+        btnCheckUpdates.disabled = true;
+        btnCheckUpdates.innerText = 'Checking...';
+        window.electronAPI.send('toMain', { type: 'check-for-updates' });
+
+        // Restore button after a short delay if no response comes back
+        setTimeout(() => {
+            btnCheckUpdates.disabled = false;
+            btnCheckUpdates.innerText = 'Check for Updates';
+        }, 8000);
+    };
+}
+
 const btnCloseSettings = document.getElementById('btn-close-settings');
 if (btnCloseSettings) {
     btnCloseSettings.onclick = () => {
@@ -1810,13 +1850,37 @@ setTimeout(renderSidebarCommunityModes, 500);
 
 // Auto Updater Listeners
 if (window.electronAPI) {
+    const updateStatusEl = document.getElementById('update-status');
+    const setUpdateStatus = (text, color) => {
+        if (!updateStatusEl) return;
+        updateStatusEl.innerText = text;
+        updateStatusEl.style.color = color || 'rgba(255,255,255,0.7)';
+    };
+
     window.electronAPI.receive('fromMain', (data) => {
-        if (data.type === 'update-available') {
-            showToast("🔄 New Update Found! Downloading in background...");
+        const restoreUpdateButton = () => {
+            if (btnCheckUpdates) {
+                btnCheckUpdates.disabled = false;
+                btnCheckUpdates.innerText = 'Check for Updates';
+            }
+        };
+
+        if (data.type === 'checking-updates') {
+            setUpdateStatus('Checking for updates...', 'rgba(255,255,255,0.9)');
+        } else if (data.type === 'update-available') {
+            setUpdateStatus('New update found! Downloading in background…', 'rgba(56, 189, 248, 1)');
+            restoreUpdateButton();
+        } else if (data.type === 'update-not-available') {
+            setUpdateStatus('You are on the latest version. ✅', 'rgba(134, 239, 172, 1)');
+            restoreUpdateButton();
         } else if (data.type === 'update-downloaded') {
-            if (confirm("✨ New Update Downloaded! Would you like to restart and install now?")) {
+            restoreUpdateButton();
+            if (confirm('✨ New Update Downloaded! Would you like to restart and install now?')) {
                 window.electronAPI.send('toMain', { type: 'window-control', action: 'quit-and-install' });
             }
+        } else if (data.type === 'update-error') {
+            setUpdateStatus('Update error: ' + (data.message || 'Unknown error'), 'rgba(248, 113, 113, 1)');
+            restoreUpdateButton();
         }
     });
 }

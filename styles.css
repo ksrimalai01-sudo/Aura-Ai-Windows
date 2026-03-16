@@ -898,6 +898,8 @@ webview {
     gap: 10px;
     z-index: 2000;
     pointer-events: none;
+    max-width: 320px;
+    overflow: hidden;
 }
 
 .toast {
@@ -909,6 +911,8 @@ webview {
     font-size: 0.9rem;
     box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
     animation: toastFadeInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1), toastFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) 2.7s forwards;
+    word-break: break-word;
+    max-width: 320px;
 }
 
 @keyframes toastFadeInRight {

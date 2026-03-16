@@ -2,6 +2,9 @@ const { app, BrowserWindow, globalShortcut, ipcMain, desktopCapturer, session, c
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 
+// Expose app version to the renderer for UI display
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 // --- Explanation / 説明 / คำอธิบาย ---
 // [EN] The Main Process: This is the brain of the app. It manages system events and windows.
 // [JP] メイン・プロセス (Main Process): アプリの心臓部です。システムイベントやウィンドウを管理します。
@@ -54,9 +57,19 @@ app.whenReady().then(() => {
         if (win) win.webContents.send('fromMain', { type: 'update-available' });
     });
 
+    autoUpdater.on('update-not-available', () => {
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) win.webContents.send('fromMain', { type: 'update-not-available' });
+    });
+
     autoUpdater.on('update-downloaded', () => {
         const win = BrowserWindow.getAllWindows()[0];
         if (win) win.webContents.send('fromMain', { type: 'update-downloaded' });
+    });
+
+    autoUpdater.on('error', (err) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) win.webContents.send('fromMain', { type: 'update-error', message: (err && err.message) ? err.message : String(err) });
     });
 
     // Register Alt+Space hotkey
@@ -87,6 +100,9 @@ app.whenReady().then(() => {
             }
             else if (arg.action === 'close') win.close();
             else if (arg.action === 'quit-and-install') autoUpdater.quitAndInstall();
+        } else if (arg.type === 'check-for-updates') {
+            autoUpdater.checkForUpdatesAndNotify();
+            if (win) win.webContents.send('fromMain', { type: 'checking-updates' });
         } else if (arg.type === 'set-opacity') {
             win.setOpacity(arg.value);
         } else if (arg.type === 'capture-screen') {
