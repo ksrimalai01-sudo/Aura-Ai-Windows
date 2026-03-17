@@ -5,7 +5,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, limit, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithCredential, onAuthStateChanged, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAf6RujZUAByBmMcgvYerYD_wOyP1q0MbY",
@@ -219,22 +219,58 @@ if (btnCancelVerify) {
 }
 
 if (authGoogleBtn) {
-    // Google login isn't supported in this embedded Electron build due to OAuth domain restrictions.
-    // Hide the button until a proper integration (e.g., custom OAuth flow) is added.
-    authGoogleBtn.style.display = 'none';
-
-    // If you later want to re-enable it, remove the above line and uncomment the block below.
-    /*
     authGoogleBtn.onclick = async () => {
-        const provider = new GoogleAuthProvider();
         if (authError) authError.classList.add('hidden');
-        try {
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            showError(error.message.replace('Firebase: ', ''));
-        }
+        
+        // [EN] Professional way: Official Google OAuth flow for Desktop Apps
+        // [TH] วิธีแบบมือโปร: ใช้ระบบ Google OAuth ของจริงสำหรับแอป Desktop ครับ มั่นใจได้ 100%
+        const GOOGLE_CLIENT_ID = "526063420718-8op2v9l03dclb4hno1oe1svmtp1442f2.apps.googleusercontent.com";
+        const REDIRECT_URI = "http://localhost:3000";
+        
+        window.electronAPI.send('toMain', { type: 'start-auth-server' });
+        
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
+            `client_id=${GOOGLE_CLIENT_ID}&` +
+            `redirect_uri=${REDIRECT_URI}&` +
+            `response_type=id_token&` + // Direct ID token for Firebase
+            `scope=openid%20profile%20email&` +
+            `nonce=${Math.random().toString(36).substring(2)}`;
+        
+        window.electronAPI.send('toMain', { type: 'open-external-url', url: authUrl });
+        
+        showToast("🌐 Redirecting to Google Login...");
     };
-    */
+}
+
+// Listen for messages from main process
+window.electronAPI.receive('fromMain', async (data) => {
+    if (data.type === 'deep-link') {
+        processDeepLink(data.url);
+    } else if (data.type === 'auth-success') {
+        // From Local Loopback Server
+        completeGoogleSignIn(data.idToken);
+    }
+});
+
+async function processDeepLink(urlStr) {
+    try {
+        const url = new URL(urlStr);
+        const params = new URLSearchParams(url.search || url.hash.substring(1));
+        const idToken = params.get('id_token') || params.get('code');
+        if (idToken) completeGoogleSignIn(idToken);
+    } catch (e) {
+        console.error("Deep Link Error:", e);
+    }
+}
+
+async function completeGoogleSignIn(idToken) {
+    try {
+        const credential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(auth, credential);
+        showToast("✅ Signed in with Google!");
+    } catch (error) {
+        showError("Google Auth Error: " + error.message);
+    }
 }
 
 // Sidebar Logout
@@ -595,7 +631,46 @@ function getActivePrompts(mode) {
     }
     return defaultPrompts[mode] || [];
 }
+    // --- Shortcut Helpers ---
+function normalizeShortcut(str) {
+    if (!str) return '';
+    return str
+        .replace(/⌘|Command|Meta/gi, 'Cmd')
+        .replace(/⌥|Option|Opt/gi, 'Alt')
+        .split('+')
+        .map(p => p.trim())
+        .join('+');
+}
 
+function getDisplayKey(str, isMac) {
+    if (!str) return '';
+    let parts = str.split('+');
+    return parts.map(p => {
+        const lp = p.toLowerCase();
+        // [EN] Command (Mac) / Ctrl (Win)
+        if (lp === 'cmd' || lp === 'command' || lp === 'meta' || lp === 'ctrl') return isMac ? 'Command' : 'Ctrl';
+        // [EN] Option (Mac) / Alt (Win)
+        if (lp === 'alt' || lp === 'option' || lp === 'opt') return isMac ? 'Option' : 'Alt';
+        return p;
+    }).join('+');
+}
+
+function getShortcutLabel(shortcutObj) {
+    if (!settings.shortcuts || !settings.shortcuts.enabled || !shortcutObj || !shortcutObj.enabled) return '';
+    const isMac = window.electronAPI && window.electronAPI.isMac;
+    let label = shortcutObj.key || '';
+    
+    // Detailed Platform Symbols for Labels
+    if (isMac) {
+        label = label
+            .replace(/Ctrl/gi, '⌃')
+            .replace(/Alt/gi, '⌥')
+            .replace(/Shift/gi, '⇧')
+            .replace(/Cmd|Command|Meta/gi, '⌘');
+    }
+    
+    return `[${label}]`;
+}
 // Webview references & Injection Logic
 // インジェクション (Injection) - การส่งข้อความเข้าช่องพิมพ์โดยตรง
 // Hub Logic using consolidated getTargetWebview below
@@ -616,7 +691,7 @@ function renderChips(mode) {
         const span = document.createElement('span');
         span.className = 'chip';
         // Add Shortcut text
-        const shortcut = index < 5 ? ` [Alt+${index + 1}]` : '';
+        const shortcut = (index < 5 && settings.shortcuts) ? getShortcutLabel(settings.shortcuts[`p${index + 1}`]) : '';
         span.innerText = p.label + shortcut;
         span.onclick = () => {
             const userInput = hubInput.value.trim();
@@ -647,25 +722,6 @@ hubInput.addEventListener('keypress', (e) => {
     }
 });
 
-// Shortcut Hotkeys for Prompts (Alt + 1-5)
-document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key >= '1' && e.key <= '5') {
-        e.preventDefault();
-        const index = parseInt(e.key) - 1;
-        const activePrompts = getActivePrompts(settings.currentMode);
-        if (activePrompts[index]) {
-            const p = activePrompts[index];
-            const userInput = hubInput ? hubInput.value.trim() : '';
-            const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
-                .replace('[YOUR TOPIC]', userInput)
-                .replace('[PASTE SENTENCE]', userInput)
-                .replace('[YOUR TEXT]', userInput)
-                .replace('[YOUR KANJI]', userInput);
-            injectToAI(fullPrompt);
-            showToast(`🚀 Sent Prompt: ${p.label}`);
-        }
-    }
-});
 
 
 function renderPrompts(mode) {
@@ -674,7 +730,7 @@ function renderPrompts(mode) {
     activePrompts.forEach((p, index) => {
         const div = document.createElement('div');
         div.className = 'prompt-item';
-        const shortcut = index < 5 ? ` (Alt+${index + 1})` : '';
+        const shortcut = (index < 5 && settings.shortcuts) ? getShortcutLabel(settings.shortcuts[`p${index + 1}`]) : '';
         div.innerText = p.label + shortcut;
         div.title = "Left Click: Copy/Send. Right Click: Edit\n\nPrompt Text:\n" + p.text; // Tooltip showing full text
         div.onclick = () => {
@@ -802,8 +858,28 @@ window.electronAPI.receive('fromMain', (arg) => {
             injectToAI(hubInput.value);
         } else if (arg.action === 'toggle-sidebar') {
             const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('collapsed');
+            if (sidebar) sidebar.classList.toggle('collapsed');
             console.log("Sidebar Toggled via Main Process");
+        } else if (arg.action === 'broadcast-prompt') {
+            broadcastPrompt(hubInput.value);
+        } else if (arg.action && arg.action.startsWith('prompt-')) {
+            const index = parseInt(arg.action.split('-')[1]) - 1;
+            const activePrompts = getActivePrompts(settings.currentMode);
+            const p = activePrompts[index];
+            if (p) {
+                const userInput = hubInput.value.trim();
+                if (userInput) {
+                    const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
+                        .replace('[YOUR TOPIC]', userInput)
+                        .replace('[PASTE SENTENCE]', userInput)
+                        .replace('[YOUR TEXT]', userInput)
+                        .replace('[YOUR KANJI]', userInput);
+                    injectToAI(fullPrompt);
+                } else {
+                    navigator.clipboard.writeText(p.text);
+                    showToast(`✅ Copied Template:\n"${p.text}"`);
+                }
+            }
         }
     } else if (arg.type === 'screenshot-captured') {
         btnScreenshot.innerText = "📸 Screenshot";
@@ -824,6 +900,29 @@ let settings = {
     suffix: ' Please explain in Thai.',
     autoSend: false,
     autoRead: false,
+    shortcuts: (window.electronAPI && window.electronAPI.isMac) ? {
+        enabled: true,
+        send: { enabled: true, key: 'Cmd+H' },
+        broadcast: { enabled: true, key: 'Cmd+Shift+H' },
+        sidebar: { enabled: true, key: 'Cmd+G' },
+        global: { enabled: true, key: 'Cmd+F' }, // Suggested by user for Mac
+        p1: { enabled: true, key: 'Alt+1' },
+        p2: { enabled: true, key: 'Alt+2' },
+        p3: { enabled: true, key: 'Alt+3' },
+        p4: { enabled: true, key: 'Alt+4' },
+        p5: { enabled: true, key: 'Alt+5' }
+    } : {
+        enabled: true,
+        send: { enabled: true, key: 'Ctrl+H' },
+        broadcast: { enabled: true, key: 'Ctrl+Shift+H' },
+        sidebar: { enabled: true, key: 'Ctrl+G' },
+        global: { enabled: true, key: 'Alt+Space' },
+        p1: { enabled: true, key: 'Alt+1' },
+        p2: { enabled: true, key: 'Alt+2' },
+        p3: { enabled: true, key: 'Alt+3' },
+        p4: { enabled: true, key: 'Alt+4' },
+        p5: { enabled: true, key: 'Alt+5' }
+    },
     theme: 'dark',
     showEcommerce: false,
     showJapanese: false,
@@ -900,12 +999,34 @@ function applySettingsToUI() {
     if (chkSuffix) chkSuffix.checked = settings.useSuffix;
     const txtSuffix = document.getElementById('set-suffix-val');
     if (txtSuffix) txtSuffix.value = settings.suffix;
-    const chkAutoSend = document.getElementById('set-auto-send');
-    if (chkAutoSend) chkAutoSend.checked = settings.autoSend;
     if (document.getElementById('set-show-ecommerce')) document.getElementById('set-show-ecommerce').checked = settings.showEcommerce !== false;
     if (document.getElementById('set-show-japanese')) document.getElementById('set-show-japanese').checked = settings.showJapanese !== false;
     const chkRead = document.getElementById('set-auto-read');
     if (chkRead) chkRead.checked = settings.autoRead;
+
+    // Shortcuts UI Sync
+    if (settings.shortcuts) {
+        const chkAll = document.getElementById('set-shortcuts-enabled');
+        if (chkAll) chkAll.checked = settings.shortcuts.enabled !== false;
+
+        const isMac = window.electronAPI && window.electronAPI.isMac;
+        const syncItem = (id, key) => {
+            const chk = document.getElementById(`chk-shortcut-${id}`);
+            const input = document.getElementById(`set-shortcut-${id}`);
+            if (chk) chk.checked = settings.shortcuts[key].enabled !== false;
+            if (input) input.value = getDisplayKey(settings.shortcuts[key].key, isMac);
+        };
+
+        syncItem('send', 'send');
+        syncItem('broadcast', 'broadcast');
+        syncItem('sidebar', 'sidebar');
+        syncItem('global', 'global');
+        syncItem('p1', 'p1');
+        syncItem('p2', 'p2');
+        syncItem('p3', 'p3');
+        syncItem('p4', 'p4');
+        syncItem('p5', 'p5');
+    }
 
     // Custom AI Sync
     const showCustom = settings.showCustomAI === true;
@@ -975,7 +1096,20 @@ function applySettingsToUI() {
 
     if (settings.useApiMode) {
         showToast("🌟 Aura AI Pro Mode Active!\nFuture API calls will be routed via OpenRouter.");
+    } else {
+        // [EN] Force hide if disabled
+        // [TH] บังคับปิดถ้าปิดโหมดไปแล้ว
+        toggleView('api', false);
     }
+
+    const chkAutoSend = document.getElementById('set-auto-send');
+    if (chkAutoSend) chkAutoSend.checked = settings.autoSend;
+    const chkShortcutAutoSend = document.getElementById('set-shortcut-auto-send');
+    if (chkShortcutAutoSend) chkShortcutAutoSend.checked = settings.autoSend;
+
+    // Main UI Auto-Send Sync
+    const chkAutoMain = document.getElementById('chk-auto-send-main');
+    if (chkAutoMain) chkAutoMain.checked = settings.autoSend === true;
 }
 
 let isSyncing = false;
@@ -1038,8 +1172,58 @@ function loadSettings() {
 
         if (!settings.currentMode) settings.currentMode = 'general';
         if (!settings.customPrompts) settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
+        
+        // Migration and Ensure full shortcut structure
+        if (!settings.shortcuts || typeof settings.shortcuts.enabled === 'undefined') {
+            const isMac = window.electronAPI && window.electronAPI.isMac;
+            const old = settings.shortcuts || {};
+            settings.shortcuts = isMac ? {
+                enabled: true,
+                send: { enabled: true, key: old.send || 'Cmd+H' },
+                broadcast: { enabled: true, key: old.broadcast || 'Cmd+Shift+H' },
+                sidebar: { enabled: true, key: old.sidebar || 'Cmd+G' },
+                global: { enabled: true, key: old.global || 'Cmd+F' },
+                p1: { enabled: true, key: 'Alt+1' },
+                p2: { enabled: true, key: 'Alt+2' },
+                p3: { enabled: true, key: 'Alt+3' },
+                p4: { enabled: true, key: 'Alt+4' },
+                p5: { enabled: true, key: 'Alt+5' }
+            } : {
+                enabled: true,
+                send: { enabled: true, key: old.send || 'Ctrl+H' },
+                broadcast: { enabled: true, key: old.broadcast || 'Ctrl+Shift+H' },
+                sidebar: { enabled: true, key: old.sidebar || 'Ctrl+G' },
+                global: { enabled: true, key: old.global || 'Alt+Space' },
+                p1: { enabled: true, key: 'Alt+1' },
+                p2: { enabled: true, key: 'Alt+2' },
+                p3: { enabled: true, key: 'Alt+3' },
+                p4: { enabled: true, key: 'Alt+4' },
+                p5: { enabled: true, key: 'Alt+5' }
+            };
+        } else if (window.electronAPI && window.electronAPI.isMac) {
+            // [EN] Proactive migration for existing Mac users using old Windows defaults
+            // [TH] ย้ายคีย์ลัดสำหรับผู้ใช้ Mac เดิมที่ยังเป็นค่าเริ่มต้นของ Windows
+            if (settings.shortcuts.global.key === 'Alt+Space') {
+                settings.shortcuts.global.key = 'Cmd+F';
+            }
+            if (settings.shortcuts.send.key === 'Ctrl+H') settings.shortcuts.send.key = 'Cmd+H';
+            if (settings.shortcuts.broadcast.key === 'Ctrl+Shift+H') settings.shortcuts.broadcast.key = 'Cmd+Shift+H';
+            if (settings.shortcuts.sidebar.key === 'Ctrl+G') settings.shortcuts.sidebar.key = 'Cmd+G';
+        }
     } else {
         settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
+        settings.shortcuts = {
+            enabled: true,
+            send: { enabled: true, key: 'Ctrl+H' },
+            broadcast: { enabled: true, key: 'Ctrl+Shift+H' },
+            sidebar: { enabled: true, key: 'Ctrl+G' },
+            global: { enabled: true, key: 'Alt+Space' },
+            p1: { enabled: true, key: 'Alt+1' },
+            p2: { enabled: true, key: 'Alt+2' },
+            p3: { enabled: true, key: 'Alt+3' },
+            p4: { enabled: true, key: 'Alt+4' },
+            p5: { enabled: true, key: 'Alt+5' }
+        };
     }
 
     // Enable/disable the API option in the hub dropdown based on Pro Mode
@@ -1055,6 +1239,11 @@ function loadSettings() {
 
     // Initiate background sync with Firestore
     syncWithCloud();
+
+    // Sync shortcuts to Main Process on startup
+    if (settings.shortcuts) {
+        window.electronAPI.send('toMain', { type: 'update-shortcuts', shortcuts: settings.shortcuts });
+    }
 }
 
 function saveSettings() {
@@ -1073,7 +1262,9 @@ function saveSettings() {
         if (txtSuffixVal) settings.suffix = txtSuffixVal.value;
 
         const chkAutoSend = document.getElementById('set-auto-send');
-        if (chkAutoSend) settings.autoSend = chkAutoSend.checked;
+        const chkShortcutAutoSend = document.getElementById('set-shortcut-auto-send');
+        if (chkShortcutAutoSend) settings.autoSend = chkShortcutAutoSend.checked;
+        else if (chkAutoSend) settings.autoSend = chkAutoSend.checked;
 
         let chkAutoRead = document.getElementById('set-auto-read');
         if (chkAutoRead) settings.autoRead = chkAutoRead.checked;
@@ -1098,6 +1289,31 @@ function saveSettings() {
 
         let chkApiMode = document.getElementById('set-use-api-mode');
         if (chkApiMode) settings.useApiMode = chkApiMode.checked;
+
+        // Custom Shortcuts
+        const chkShortcutsEnabled = document.getElementById('set-shortcuts-enabled');
+        if (chkShortcutsEnabled) settings.shortcuts.enabled = chkShortcutsEnabled.checked;
+
+        // Helper to collect individual shortcut
+        const collectShortcut = (id, key) => {
+            const chk = document.getElementById(`chk-shortcut-${id}`);
+            const input = document.getElementById(`set-shortcut-${id}`);
+            if (chk) settings.shortcuts[key].enabled = chk.checked;
+            if (input) settings.shortcuts[key].key = input.value.trim() || settings.shortcuts[key].key;
+        };
+
+        collectShortcut('send', 'send');
+        collectShortcut('broadcast', 'broadcast');
+        collectShortcut('sidebar', 'sidebar');
+        collectShortcut('global', 'global');
+        collectShortcut('p1', 'p1');
+        collectShortcut('p2', 'p2');
+        collectShortcut('p3', 'p3');
+        collectShortcut('p4', 'p4');
+        collectShortcut('p5', 'p5');
+
+        // Notify Main Process about shortcut changes
+        window.electronAPI.send('toMain', { type: 'update-shortcuts', shortcuts: settings.shortcuts });
 
         // Save visibility flags
         if (document.getElementById('set-show-gemini')) settings.showGemini = document.getElementById('set-show-gemini').checked;
@@ -1125,6 +1341,17 @@ function saveSettings() {
     }
 }
 
+// Global Main UI Listeners
+const chkAutoSendMain = document.getElementById('chk-auto-send-main');
+if (chkAutoSendMain) {
+    chkAutoSendMain.onchange = (e) => {
+        settings.autoSend = e.target.checked;
+        localStorage.setItem('aura_settings', JSON.stringify(settings));
+        applySettingsToUI(); // Sync other instances of the checkbox
+        showToast(settings.autoSend ? "⚡ Auto-Send Enabled" : "⚡ Auto-Send Disabled");
+    };
+}
+
 function applyProviderChange(provider) {
     let hubSelect = document.getElementById('hub-ai-selector');
     if (hubSelect) hubSelect.value = provider;
@@ -1133,34 +1360,102 @@ function applyProviderChange(provider) {
     console.log(`Switched Target Provider to: ${provider}`);
 }
 
+function matchesShortcut(e, shortcutObj) {
+    if (!settings.shortcuts || !settings.shortcuts.enabled || !shortcutObj || !shortcutObj.enabled) return false;
+    const shortcutStr = normalizeShortcut(shortcutObj.key);
+    if (!shortcutStr) return false;
+    
+    const parts = shortcutStr.toLowerCase().split('+');
+    const isMac = window.electronAPI && window.electronAPI.isMac;
+    
+    // [EN] Primary Modifier (Cmd on Mac, Ctrl on Win)
+    // [JP] プライマリ修飾キー (MacはCmd、WinはCtrl)
+    // [TH] ปุ่มหลัก (Cmd บน Mac, Ctrl บน Windows)
+    const isCmdOrCtrl = parts.includes('cmd') || parts.includes('ctrl');
+    let primaryMatch = false;
+    if (isCmdOrCtrl) {
+        primaryMatch = isMac ? e.metaKey : e.ctrlKey;
+    } else {
+        primaryMatch = !e.metaKey && !e.ctrlKey;
+    }
+
+    let shiftMatch = parts.includes('shift') ? e.shiftKey : !e.shiftKey;
+    let altMatch = parts.includes('alt') ? e.altKey : !e.altKey;
+
+    let key = e.key;
+    if (key === 'Unidentified' || !key) {
+        if (e.code.startsWith('Digit')) key = e.code.replace('Digit', '');
+        else if (e.code.startsWith('Numpad') && e.code.length === 7) key = e.code.replace('Numpad', '');
+        else if (e.code) key = e.code;
+    }
+
+    const keyMatch = (key || '').toLowerCase() === parts[parts.length - 1];
+    
+    return primaryMatch && shiftMatch && altMatch && keyMatch;
+}
+
 // Shortcuts Manager
 // ショートカット (Shortcut) - คีย์ลัด
 window.addEventListener('keydown', (e) => {
-    const isMac = window.electronAPI && window.electronAPI.isMac;
-    const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-    // [Ctrl/Cmd + H] -> Send Prompt from Hub
-    if (modifier && e.key.toLowerCase() === 'h') {
-        e.preventDefault();
-        if (e.shiftKey) {
-            broadcastPrompt(hubInput.value);
-        } else {
-            injectToAI(hubInput.value);
-        }
+    // [EN] Skip global shortcuts if user is typing in ANY input or textarea
+    // [JP] ユーザーが入力中の場合はグローバルショートカットをスキップする
+    // [TH] ข้ามการทำงานของคีย์ลัดถ้าผู้ใช้กำลังพิมพ์อยู่ในช่อง Input ใดๆ
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
     }
-    // [Ctrl/Cmd + G] -> Toggle Sidebar
-    if (modifier && e.key.toLowerCase() === 'g') {
+
+    if (!settings.shortcuts || !settings.shortcuts.enabled) return;
+
+    // Dynamic Shortcuts from Settings
+    if (matchesShortcut(e, settings.shortcuts.send)) {
+        e.preventDefault();
+        injectToAI(hubInput.value);
+    } else if (matchesShortcut(e, settings.shortcuts.broadcast)) {
+        e.preventDefault();
+        broadcastPrompt(hubInput.value);
+    } else if (matchesShortcut(e, settings.shortcuts.sidebar)) {
         e.preventDefault();
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) sidebar.classList.toggle('collapsed');
         console.log("Sidebar Toggled");
+    } else if (matchesShortcut(e, settings.shortcuts.p1)) {
+        e.preventDefault();
+        triggerPromptShortcut(0);
+    } else if (matchesShortcut(e, settings.shortcuts.p2)) {
+        e.preventDefault();
+        triggerPromptShortcut(1);
+    } else if (matchesShortcut(e, settings.shortcuts.p3)) {
+        e.preventDefault();
+        triggerPromptShortcut(2);
+    } else if (matchesShortcut(e, settings.shortcuts.p4)) {
+        e.preventDefault();
+        triggerPromptShortcut(3);
+    } else if (matchesShortcut(e, settings.shortcuts.p5)) {
+        e.preventDefault();
+        triggerPromptShortcut(4);
     }
+    
     // [Esc] -> Close Settings Modal
     if (e.key === 'Escape') {
         const settingsOverlay = document.getElementById('settings-overlay');
         if (settingsOverlay) settingsOverlay.classList.add('hidden');
     }
 });
+
+function triggerPromptShortcut(index) {
+    const activePrompts = getActivePrompts(settings.currentMode);
+    if (activePrompts[index]) {
+        const p = activePrompts[index];
+        const userInput = hubInput ? hubInput.value.trim() : '';
+        const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
+            .replace('[YOUR TOPIC]', userInput)
+            .replace('[PASTE SENTENCE]', userInput)
+            .replace('[YOUR TEXT]', userInput)
+            .replace('[YOUR KANJI]', userInput);
+        injectToAI(fullPrompt);
+        showToast(`🚀 Sent Prompt: ${p.label}`);
+    }
+}
 
 // Sync Hub Selector with Provider
 document.getElementById('hub-ai-selector').onchange = (e) => {
@@ -1306,6 +1601,105 @@ if (btnCloseSettings) {
 }
 const btnSaveSettings = document.getElementById('btn-save-settings');
 if (btnSaveSettings) btnSaveSettings.onclick = saveSettings;
+
+// --- Shortcut Recorder Logic ---
+// 録音機能 (Rokuon kinou) - ตัวบันทึกคีย์ลัด
+function setupShortcutRecorders() {
+    const recorderIds = [
+        'set-shortcut-send', 'set-shortcut-broadcast', 'set-shortcut-sidebar', 
+        'set-shortcut-global', 'set-shortcut-p1', 'set-shortcut-p2', 
+        'set-shortcut-p3', 'set-shortcut-p4', 'set-shortcut-p5'
+    ];
+
+    recorderIds.forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+
+        input.onkeydown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Ignore bare modifier keys
+            if (['Control', 'Alt', 'Shift', 'Meta', 'Command', 'OS'].includes(e.key)) return;
+
+            const isMac = window.electronAPI && window.electronAPI.isMac;
+            const parts = [];
+            // [EN] Sort order: Ctrl, Cmd (Meta), Alt, Shift, Key
+            if (e.ctrlKey) parts.push('Ctrl');
+            if (e.metaKey) parts.push('Cmd');
+            if (e.altKey) parts.push('Alt');
+            if (e.shiftKey) parts.push('Shift');
+
+            let key = e.key;
+            
+            // [EN] Handle "Unidentified" keys specially (common for numerical or special keys on some layouts)
+            // [TH] จัดการคีย์ "Unidentified" เป็นพิเศษ (มักเกิดกับตัวเลขหรือปุ่มพิเศษในบางเลย์เอาต์)
+            if (key === 'Unidentified' || !key) {
+                if (e.code.startsWith('Digit')) key = e.code.replace('Digit', '');
+                else if (e.code.startsWith('Numpad') && e.code.length === 7) key = e.code.replace('Numpad', '');
+                else if (e.code) key = e.code;
+            }
+
+            if (key === ' ') key = 'Space';
+            else if (key && key.length === 1) key = key.toUpperCase();
+            
+            // Avoid duplicate text if key is a modifier (happens in some edge cases)
+            if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return;
+
+            if (key) parts.push(key);
+            const shortcutStr = parts.join('+');
+            input.value = getDisplayKey(shortcutStr, isMac);
+        };
+
+        // Clear on Right Click or Double Click? Let's just allow backspace?
+        // Actually, since we preventDefault on keydown, backspace won't work normally.
+        // Let's make it so Escape clears the field if focused.
+        input.addEventListener('keyup', (e) => {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                input.value = '';
+            }
+        });
+    });
+}
+// Initialize after DOM load
+setTimeout(() => {
+    setupShortcutRecorders();
+    
+    // Reset Button Logic
+    const btnReset = document.getElementById('btn-reset-shortcuts');
+    if (btnReset) {
+        btnReset.onclick = () => {
+            const isMac = window.electronAPI && window.electronAPI.isMac;
+            const defaults = isMac ? {
+                enabled: true,
+                send: { enabled: true, key: 'Cmd+H' },
+                broadcast: { enabled: true, key: 'Cmd+Shift+H' },
+                sidebar: { enabled: true, key: 'Cmd+G' },
+                global: { enabled: true, key: 'Cmd+F' },
+                p1: { enabled: true, key: 'Alt+1' },
+                p2: { enabled: true, key: 'Alt+2' },
+                p3: { enabled: true, key: 'Alt+3' },
+                p4: { enabled: true, key: 'Alt+4' },
+                p5: { enabled: true, key: 'Alt+5' }
+            } : {
+                enabled: true,
+                send: { enabled: true, key: 'Ctrl+H' },
+                broadcast: { enabled: true, key: 'Ctrl+Shift+H' },
+                sidebar: { enabled: true, key: 'Ctrl+G' },
+                global: { enabled: true, key: 'Alt+Space' },
+                p1: { enabled: true, key: 'Alt+1' },
+                p2: { enabled: true, key: 'Alt+2' },
+                p3: { enabled: true, key: 'Alt+3' },
+                p4: { enabled: true, key: 'Alt+4' },
+                p5: { enabled: true, key: 'Alt+5' }
+            };
+            
+            settings.shortcuts = defaults;
+            applySettingsToUI();
+            showToast("🔄 Shortcuts Reset to Defaults!");
+        };
+    }
+}, 1000);
 
 const btnUpdateUser = document.getElementById('btn-update-username');
 if (btnUpdateUser) {
@@ -1881,9 +2275,10 @@ setTimeout(renderSidebarCommunityModes, 500);
 // Auto Updater Listeners
 if (window.electronAPI) {
     const updateStatusEl = document.getElementById('update-status');
-    const setUpdateStatus = (text, color) => {
+    const setUpdateStatus = (text, color, isHtml = false) => {
         if (!updateStatusEl) return;
-        updateStatusEl.innerText = text;
+        if (isHtml) updateStatusEl.innerHTML = text;
+        else updateStatusEl.innerText = text;
         updateStatusEl.style.color = color || 'rgba(255,255,255,0.7)';
     };
 
@@ -1920,9 +2315,24 @@ if (window.electronAPI) {
             }
         } else if (data.type === 'update-error') {
             if (window.electronAPI && window.electronAPI.isMac) {
-                // Silence errors on Mac and show the standard manual update guide
                 console.log("Update Error (Likely Signing): " + data.message);
-                setUpdateStatus('Manual update required (Security)', 'rgba(255, 165, 0, 1)');
+                const isSignatureErr = data.message && (data.message.includes('signature') || data.message.includes('validation'));
+                
+                if (isSignatureErr) {
+                    setUpdateStatus('⚠️ <a href="#" id="link-manual-update" style="color: #fbbf24; text-decoration: underline;">Manual update required (Signing error)</a>', '#fbbf24', true);
+                    const link = document.getElementById('link-manual-update');
+                    if (link) {
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            const msg = `🛡️ macOS บล็อกการอัปเดตอัตโนมัติเนื่องจากไม่มีใบรับรองนักพัฒนาครับ\n\nคุณสามารถกด OK เพื่อไปโหลดตัวล่าสุดมาทับตัวเก่าได้ทันที (ฟรีครับ!)`;
+                            if (confirm(msg)) {
+                                window.open('https://github.com/ksrimalai01-sudo/Aura-Ai-Windows/releases/latest');
+                            }
+                        };
+                    }
+                } else {
+                    setUpdateStatus('Manual update required (Security)', 'rgba(255, 165, 0, 1)');
+                }
             } else {
                 setUpdateStatus('Update error: ' + (data.message || 'Unknown error'), 'rgba(248, 113, 113, 1)');
             }

@@ -1,6 +1,6 @@
 {
   "name": "aura-ai",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Professional AI Workspace for E-commerce and Language Learning",
   "main": "main.js",
   "scripts": {
@@ -69,6 +69,14 @@
         "provider": "github",
         "owner": "ksrimalai01-sudo",
         "repo": "Aura-Ai-Windows"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "Aura AI Auth",
+        "schemes": [
+          "aura-ai"
+        ]
       }
     ]
   }
