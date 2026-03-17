@@ -33,11 +33,14 @@ function createWindow() {
 
     // Handle Global Shortcuts inside the window (even with Webview focus)
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.control && input.key.toLowerCase() === 'h' && input.type === 'keyDown') {
+        const isMac = process.platform === 'darwin';
+        const modifier = isMac ? input.meta : input.control;
+
+        if (modifier && input.key.toLowerCase() === 'h' && input.type === 'keyDown') {
             event.preventDefault();
             mainWindow.webContents.send('fromMain', { type: 'shortcut-triggered', action: 'send-prompt' });
         }
-        if (input.control && input.key.toLowerCase() === 'g' && input.type === 'keyDown') {
+        if (modifier && input.key.toLowerCase() === 'g' && input.type === 'keyDown') {
             event.preventDefault();
             mainWindow.webContents.send('fromMain', { type: 'shortcut-triggered', action: 'toggle-sidebar' });
         }

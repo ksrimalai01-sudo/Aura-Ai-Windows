@@ -21,6 +21,30 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Platform Detection & UI Adjustment
+// プラットフォームの検出 (Platform no kenshutsu) - การตรวจหาแพลตฟอร์ม
+const isMac = window.electronAPI && window.electronAPI.isMac;
+
+function updateUIShortcuts() {
+    if (!isMac) return;
+    
+    // Replace "Ctrl+" with "Cmd+" in all titles, placeholders, and button texts
+    const elements = document.querySelectorAll('[title*="Ctrl+"], [placeholder*="Ctrl+"]');
+    elements.forEach(el => {
+        if (el.title) el.title = el.title.replace(/Ctrl\+/g, 'Cmd+');
+        if (el.placeholder) el.placeholder = el.placeholder.replace(/Ctrl\+/g, 'Cmd+');
+    });
+
+    // Specifically target buttons or labels that might have Ctrl+ in their textContent
+    const allLabels = document.querySelectorAll('button, label, span, p, div');
+    allLabels.forEach(el => {
+        if (el.children.length === 0 && el.textContent.includes('Ctrl+')) {
+           el.textContent = el.textContent.replace(/Ctrl\+/g, 'Cmd+');
+        }
+    });
+}
+window.addEventListener('DOMContentLoaded', updateUIShortcuts);
+
 // Authentication Logic
 let currentUser = null;
 window.USER_DOC_REF = null;
@@ -783,7 +807,9 @@ window.electronAPI.receive('fromMain', (arg) => {
         }
     } else if (arg.type === 'screenshot-captured') {
         btnScreenshot.innerText = "📸 Screenshot";
-        showToast("✅ Capture Success!\n[TH] ก๊อปรูปลง Clipboard แล้วครับ กด Ctrl+V ที่แชทได้เลย!");
+        const isMac = window.electronAPI && window.electronAPI.isMac;
+        const pasteKey = isMac ? '⌘+V' : 'Ctrl+V';
+        showToast(`✅ Capture Success!\n[TH] ก๊อปรูปลง Clipboard แล้วครับ กด ${pasteKey} ที่แชทได้เลย!`);
     }
 });
 
@@ -1110,8 +1136,11 @@ function applyProviderChange(provider) {
 // Shortcuts Manager
 // ショートカット (Shortcut) - คีย์ลัด
 window.addEventListener('keydown', (e) => {
-    // [Ctrl + H] -> Send Prompt from Hub
-    if (e.ctrlKey && e.key.toLowerCase() === 'h') {
+    const isMac = window.electronAPI && window.electronAPI.isMac;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    // [Ctrl/Cmd + H] -> Send Prompt from Hub
+    if (modifier && e.key.toLowerCase() === 'h') {
         e.preventDefault();
         if (e.shiftKey) {
             broadcastPrompt(hubInput.value);
@@ -1119,16 +1148,17 @@ window.addEventListener('keydown', (e) => {
             injectToAI(hubInput.value);
         }
     }
-    // [Ctrl + G] -> Toggle Sidebar
-    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+    // [Ctrl/Cmd + G] -> Toggle Sidebar
+    if (modifier && e.key.toLowerCase() === 'g') {
         e.preventDefault();
         const sidebar = document.querySelector('.sidebar');
-        sidebar.classList.toggle('collapsed'); // Need to add CSS for this
+        if (sidebar) sidebar.classList.toggle('collapsed');
         console.log("Sidebar Toggled");
     }
     // [Esc] -> Close Settings Modal
     if (e.key === 'Escape') {
-        document.getElementById('settings-overlay').classList.add('hidden');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        if (settingsOverlay) settingsOverlay.classList.add('hidden');
     }
 });
 
@@ -1875,11 +1905,27 @@ if (window.electronAPI) {
             restoreUpdateButton();
         } else if (data.type === 'update-downloaded') {
             restoreUpdateButton();
-            if (confirm('✨ New Update Downloaded! Would you like to restart and install now?')) {
-                window.electronAPI.send('toMain', { type: 'window-control', action: 'quit-and-install' });
+            if (window.electronAPI && window.electronAPI.isMac) {
+                // Custom Mac Update Message
+                const msg = `🛡️ กฎของ Apple: macOS จะอนุญาตให้โปรแกรมอัปเดตตัวเองได้ ก็ต่อเมื่อโปรแกรมนั้นถูกเซ็นชื่อด้วย "ใบรับรองนักพัฒนาของ Apple" (Official Certificate) ที่ต้องเสียเงินปีละ $99 เท่านั้นครับ\n\n` +
+                            `สถานะของเรา: ตอนนี้เราใช้วิธีสร้างไฟล์แบบไม่มีใบรับรอง (Ad-hoc) เครื่อง Mac เลยมองว่าการที่เราจะโหลดไฟล์ใหม่มาทับตัวเก่าเป็นเรื่องไม่ปลอดภัย มันเลยบล็อกไว้ครับ\n\n` +
+                            `✅ วิธีแก้ง่ายๆ คือ: ให้คุณกดปุ่ม OK เพื่อเปิดไปหน้าดาวน์โหลด และโหลดไฟล์ใหม่มาทับตัวเก่าได้เลยครับ!`;
+                if (confirm(msg)) {
+                    window.open('https://github.com/ksrimalai01-sudo/Aura-Ai-Windows/releases/latest');
+                }
+            } else {
+                if (confirm('✨ New Update Downloaded! Would you like to restart and install now?')) {
+                    window.electronAPI.send('toMain', { type: 'window-control', action: 'quit-and-install' });
+                }
             }
         } else if (data.type === 'update-error') {
-            setUpdateStatus('Update error: ' + (data.message || 'Unknown error'), 'rgba(248, 113, 113, 1)');
+            if (window.electronAPI && window.electronAPI.isMac) {
+                // Silence errors on Mac and show the standard manual update guide
+                console.log("Update Error (Likely Signing): " + data.message);
+                setUpdateStatus('Manual update required (Security)', 'rgba(255, 165, 0, 1)');
+            } else {
+                setUpdateStatus('Update error: ' + (data.message || 'Unknown error'), 'rgba(248, 113, 113, 1)');
+            }
             restoreUpdateButton();
         }
     });
