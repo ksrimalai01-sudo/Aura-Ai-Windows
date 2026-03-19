@@ -155,6 +155,11 @@ if (!gotTheLock) {
     });
 
     app.whenReady().then(() => {
+        // [EN] Global User-Agent Spoofing: Use a modern Chrome UA to allow Google Sign-In on all sites.
+        // [TH] ปลอมแปลง User-Agent ทั้งระบบเพื่อให้ Google มั่นใจและยอมให้ล็อกอินในทุกเว็บครับ
+        const chromeUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+        session.defaultSession.setUserAgent(chromeUA);
+        
         createWindow();
         registerGlobalHotkey();
         

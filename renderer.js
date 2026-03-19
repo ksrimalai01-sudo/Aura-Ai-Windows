@@ -83,6 +83,7 @@ const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
 const btnGeneral = document.getElementById('btn-general');
 const btnEcommerce = document.getElementById('btn-ecommerce');
 const btnJapanese = document.getElementById('btn-japanese');
+const btnGraphicDesign = document.getElementById('btn-graphic-design');
 
 let isSignUpMode = false;
 
@@ -424,11 +425,17 @@ function toggleView(provider, show) {
     if (show) {
         panel.classList.remove('hidden');
         if (btn) btn.classList.add('active');
+        // Custom tab button highlight
+        const tabBtn = document.getElementById(`btn-tab-${provider}`);
+        if (tabBtn) tabBtn.classList.add('active');
+        
         // Hide dashboard if any panel is shown
         if (panels.dashboard) panels.dashboard.classList.add('hidden');
     } else {
         panel.classList.add('hidden');
         if (btn) btn.classList.remove('active');
+        const tabBtn = document.getElementById(`btn-tab-${provider}`);
+        if (tabBtn) tabBtn.classList.remove('active');
 
         // Check if all panels are hidden, if so show dashboard
         const anyVisible = Object.entries(panels).some(([id, p]) => id !== 'dashboard' && p && !p.classList.contains('hidden'));
@@ -622,6 +629,13 @@ const defaultPrompts = {
         { label: "🈁 Kanji Analysis", text: "Explain the Kanji components and readings of: [YOUR KANJI]" },
         { label: "🃏 Anki Card", text: "Based on this sentence, create a format for an Anki card (Expression, Meaning, Reading, Sample Sentence):" },
         { label: "🎭 Polite vs Casual", text: "How would you say this sentence differently in Keigo (Polite) vs Casual form: [YOUR TEXT]" }
+    ],
+    "graphic-design": [
+        { label: "🎨 Image Prompt", text: "Create a highly detailed image generation prompt for Leonardo AI based on this idea: [YOUR IDEA]. Include lighting, style, and camera angles." },
+        { label: "🖌️ Color Palette", text: "Suggest 3 unique color palettes (with hex codes) for a project about [YOUR TOPIC]. Explain the mood of each." },
+        { label: "📝 Typography Pairs", text: "Recommend 2 font pairings (Google Fonts) suitable for a [YOUR TOPIC] design, and explain why they work together." },
+        { label: "🖼️ Layout Idea", text: "Describe a wireframe or layout structure for a [YOUR TOPIC] design. Where should the focal point be?" },
+        { label: "💡 Concept Brainstorm", text: "Give me 5 unconventional visual metaphors for the concept of [YOUR TOPIC]." }
     ]
 };
 
@@ -767,6 +781,9 @@ function switchMode(mode) {
     // Hide all panels
     Object.keys(panels).forEach(p => toggleView(p, false));
 
+    const gdTools = document.getElementById('gd-tools');
+    if (gdTools) gdTools.style.display = 'none';
+
     renderPrompts(mode);
 
     if (mode === 'general') {
@@ -793,6 +810,29 @@ function switchMode(mode) {
         if (mode === 'general') { toggleView('gemini', true); toggleView('chatgpt', true); }
         else if (mode === 'ecommerce') { toggleView('gemini', true); toggleView('leonardo', true); }
         else if (mode === 'japanese') { toggleView('gemini', true); toggleView('claude', true); }
+        else if (mode === 'graphic-design') {
+            // [EN] Graphic Design Pro Setup: Pinterest (Custom AI) + ChatGPT (Prompt Gen) + Leonardo (Image Gen)
+            // [TH] การตั้งค่าหน้าจอสำหรับโหมด Graphic Design Pro
+            const customTitle = document.getElementById('custom-ai-title');
+            if (customTitle) customTitle.innerText = "Inspiration (Pinterest)";
+            
+            const gdTools = document.getElementById('gd-tools');
+            if (gdTools) gdTools.style.display = 'flex';
+
+            const wvCustom = webviews['custom'];
+            if (wvCustom && wvCustom.src === 'about:blank') {
+                wvCustom.src = "https://www.pinterest.com";
+                // Reset active button to Pinterest initially
+                const pinBtn = document.querySelector('.gd-tool-btn[data-url="https://www.pinterest.com"]');
+                if (pinBtn) pinBtn.click();
+            }
+
+            toggleView('chatgpt', true); // For prompt engineering
+            toggleView('leonardo', true); // For image generation
+            toggleView('custom', true); // For Pinterest inspiration
+            
+            applyLayoutStyle('split'); // Force split view
+        }
         else {
             // If it's a custom/unknown mode, at least show the first panel if available
             const firstPanel = settings.panelOrder[0] || 'gemini';
@@ -816,14 +856,55 @@ function switchMode(mode) {
         settings.provider = (layout && layout.length > 0) ? layout[0] : 'gemini';
     }
 
+    updateHubSelectorLabels(mode);
     const hubSelector = document.getElementById('hub-ai-selector');
     if (hubSelector) hubSelector.value = settings.provider || 'gemini';
     localStorage.setItem('aura_settings', JSON.stringify(settings));
 }
 
+function updateHubSelectorLabels(mode) {
+    const hubSelector = document.getElementById('hub-ai-selector');
+    if (!hubSelector) return;
+    
+    const customOption = hubSelector.querySelector('option[value="custom"]');
+    if (customOption) {
+        if (mode === 'graphic-design') {
+            customOption.innerText = '🎨 Inspiration';
+        } else {
+            customOption.innerText = 'Custom AI';
+        }
+    }
+}
+
+// Graphic Design Toolbar Logic
+document.querySelectorAll('.gd-tool-btn').forEach(btn => {
+    btn.onclick = (e) => {
+        const url = btn.getAttribute('data-url');
+        const wvCustom = webviews['custom'];
+        if (wvCustom) wvCustom.src = url;
+        
+        // Update active state
+        document.querySelectorAll('.gd-tool-btn').forEach(b => {
+            b.style.background = 'rgba(255,255,255,0.1)';
+            b.classList.remove('active');
+        });
+        btn.style.background = 'var(--accent)';
+        btn.classList.add('active');
+        
+        // Update panel title
+        const customTitle = document.getElementById('custom-ai-title');
+        if (customTitle) customTitle.innerText = "Inspiration (" + btn.innerText + ")";
+    };
+});
+
+const btnEcommerceStore = document.getElementById('btn-ecommerce');
+const btnJapaneseStore = document.getElementById('btn-japanese');
+const btnGraphicDesignStore = document.getElementById('btn-graphic-design');
+
 if (btnGeneral) btnGeneral.addEventListener('click', () => switchMode('general'));
 if (btnEcommerce) btnEcommerce.addEventListener('click', () => switchMode('ecommerce'));
 if (btnJapanese) btnJapanese.addEventListener('click', () => switchMode('japanese'));
+if (btnGraphicDesign) btnGraphicDesign.addEventListener('click', () => switchMode('graphic-design'));
 
 // Window Controls
 const chkOnTop = document.getElementById('chk-on-top');
@@ -926,6 +1007,8 @@ let settings = {
     theme: 'dark',
     showEcommerce: false,
     showJapanese: false,
+    showGraphicDesign: false,
+    customTabs: [],
     layouts: {
         general: ['gemini', 'chatgpt'],
         ecommerce: ['gemini', 'leonardo'],
@@ -980,9 +1063,16 @@ function applySettingsToUI() {
         if (btnJapanese) btnJapanese.classList.remove('hide-addon');
     }
 
+    if (settings.showGraphicDesign === false) {
+        if (btnGraphicDesign) btnGraphicDesign.classList.add('hide-addon');
+    } else {
+        if (btnGraphicDesign) btnGraphicDesign.classList.remove('hide-addon');
+    }
+
     // Switch to general if the active mode was hidden
     if (settings.currentMode === 'ecommerce' && settings.showEcommerce === false) settings.currentMode = 'general';
     if (settings.currentMode === 'japanese' && settings.showJapanese === false) settings.currentMode = 'general';
+    if (settings.currentMode === 'graphic-design' && settings.showGraphicDesign === false) settings.currentMode = 'general';
 
     // Sync UI
     const inputUsername = document.getElementById('set-username');
@@ -1170,6 +1260,9 @@ function loadSettings() {
         if (settings.showDeepSeek === undefined) settings.showDeepSeek = true;
         if (settings.showLeonardo === undefined) settings.showLeonardo = true;
 
+        if (settings.showGraphicDesign === undefined) settings.showGraphicDesign = false;
+        if (!settings.customTabs) settings.customTabs = [];
+
         if (!settings.currentMode) settings.currentMode = 'general';
         if (!settings.customPrompts) settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
         
@@ -1274,6 +1367,9 @@ function saveSettings() {
 
         let chkJpn = document.getElementById('set-show-japanese');
         if (chkJpn) settings.showJapanese = chkJpn.checked;
+
+        let chkGraphicDesign = document.getElementById('set-show-graphic-design');
+        if (chkGraphicDesign) settings.showGraphicDesign = chkGraphicDesign.checked;
 
         let chkCustom = document.getElementById('set-show-custom');
         if (chkCustom) settings.showCustomAI = chkCustom.checked;
@@ -1953,7 +2049,8 @@ function updateStoreButtons() {
     storeItems.forEach(btn => {
         const addon = btn.getAttribute('data-addon');
         const isInstalled = (addon === 'ecommerce' && settings.showEcommerce) ||
-            (addon === 'japanese' && settings.showJapanese);
+            (addon === 'japanese' && settings.showJapanese) ||
+            (addon === 'graphic-design' && settings.showGraphicDesign);
 
         if (isInstalled) {
             btn.innerText = "Uninstall";
@@ -1988,6 +2085,9 @@ storeItems.forEach(btn => {
         } else if (addon === 'japanese') {
             settings.showJapanese = !settings.showJapanese;
             showToast(settings.showJapanese ? "✅ Japanese Tutor Installed!" : "🗑️ Japanese Tutor Uninstalled.");
+        } else if (addon === 'graphic-design') {
+            settings.showGraphicDesign = !settings.showGraphicDesign;
+            showToast(settings.showGraphicDesign ? "✅ Graphic Design Pro Installed!" : "🗑️ Graphic Design Pro Uninstalled.");
         }
 
         localStorage.setItem('aura_settings', JSON.stringify(settings));
@@ -1999,6 +2099,33 @@ storeItems.forEach(btn => {
 
 // Expose window functions for UI hooks defined in HTML
 window.showToast = showToast;
+
+// Address Bar Logic
+const addrBar = document.getElementById('custom-ai-address');
+if (addrBar) {
+    addrBar.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            let url = addrBar.value.trim();
+            if (!url) return;
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+            const wvCustom = webviews['custom'];
+            if (wvCustom) wvCustom.src = url;
+            addrBar.blur();
+        }
+    });
+}
+
+// Sync Address Bar with Webview Navigation
+const wvCustomForAddr = webviews['custom'];
+if (wvCustomForAddr) {
+    const updateAddr = () => {
+        if (addrBar) addrBar.value = wvCustomForAddr.getURL();
+    };
+    wvCustomForAddr.addEventListener('did-navigate', updateAddr);
+    wvCustomForAddr.addEventListener('did-navigate-in-page', updateAddr);
+}
 
 // --- Community Add-on Management ---
 let editingAddonId = null;
@@ -2260,6 +2387,208 @@ function renderSidebarCommunityModes() {
     });
 }
 
+// --- Dynamic Webview / Unlimited Tabs Logic ---
+const customTabOverlay = document.getElementById('create-custom-tab-overlay');
+const btnAddCustomTab = document.getElementById('btn-add-custom-tab');
+const btnCloseCustomTabModal = document.getElementById('btn-close-custom-tab-modal');
+const btnSaveCustomTab = document.getElementById('btn-save-custom-tab');
+const btnDeleteCustomTabConfirm = document.getElementById('btn-delete-custom-tab-confirm');
+
+let editingTabId = null;
+
+if (btnAddCustomTab) btnAddCustomTab.onclick = () => {
+    editingTabId = null;
+    document.getElementById('custom-tab-modal-title').innerText = "🌐 Add Custom Webview";
+    document.getElementById('custom-tab-name').value = "";
+    document.getElementById('custom-tab-url').value = "";
+    document.getElementById('custom-tab-emoji').value = "🌐";
+    if (btnDeleteCustomTabConfirm) btnDeleteCustomTabConfirm.style.display = 'none';
+    customTabOverlay.classList.remove('hidden');
+};
+
+if (btnCloseCustomTabModal) btnCloseCustomTabModal.onclick = () => customTabOverlay.classList.add('hidden');
+
+function openEditCustomTab(id) {
+    const tab = settings.customTabs.find(t => t.id === id);
+    if (!tab) return;
+    editingTabId = id;
+    document.getElementById('custom-tab-modal-title').innerText = "⚙️ Edit Webview";
+    document.getElementById('custom-tab-name').value = tab.name;
+    document.getElementById('custom-tab-url').value = tab.url;
+    document.getElementById('custom-tab-emoji').value = tab.emoji || "🌐";
+    if (btnDeleteCustomTabConfirm) btnDeleteCustomTabConfirm.style.display = 'block';
+    customTabOverlay.classList.remove('hidden');
+}
+
+if (btnSaveCustomTab) btnSaveCustomTab.onclick = () => {
+    const name = document.getElementById('custom-tab-name').value.trim();
+    let url = document.getElementById('custom-tab-url').value.trim();
+    const emoji = document.getElementById('custom-tab-emoji').value.trim();
+
+    if (!name || !url) { showToast("⚠️ Name and URL are required!"); return; }
+    if (!url.startsWith('http')) url = 'https://' + url;
+
+    if (editingTabId) {
+        const index = settings.customTabs.findIndex(t => t.id === editingTabId);
+        if (index !== -1) {
+            settings.customTabs[index].name = name;
+            settings.customTabs[index].url = url;
+            settings.customTabs[index].emoji = emoji;
+        }
+    } else {
+        const id = "webview_" + Date.now();
+        settings.customTabs.push({ id, name, url, emoji });
+        // Add to layout of current mode by default so it shows up?
+        // Or let user toggle it? For now, let's just add it to current layouts.
+        if (!settings.layouts[settings.currentMode]) settings.layouts[settings.currentMode] = [];
+        settings.layouts[settings.currentMode].push(id);
+    }
+
+    localStorage.setItem('aura_settings', JSON.stringify(settings));
+    saveToCloud();
+    renderCustomTabs();
+    syncCustomPanels();
+    customTabOverlay.classList.add('hidden');
+    showToast("✅ Custom Webview Saved!");
+};
+
+if (btnDeleteCustomTabConfirm) btnDeleteCustomTabConfirm.onclick = () => {
+    if (!editingTabId) return;
+    if (confirm("Delete this custom webview?")) {
+        settings.customTabs = settings.customTabs.filter(t => t.id !== editingTabId);
+        // Also remove from all layouts
+        Object.keys(settings.layouts).forEach(m => {
+            settings.layouts[m] = settings.layouts[m].filter(id => id !== editingTabId);
+        });
+
+        // Remove the panel from DOM
+        const panel = document.getElementById(`panel-${editingTabId}`);
+        if (panel) panel.remove();
+        delete panels[editingTabId];
+        delete webviews[editingTabId];
+        
+        localStorage.setItem('aura_settings', JSON.stringify(settings));
+        saveToCloud();
+        renderCustomTabs();
+        customTabOverlay.classList.add('hidden');
+        showToast("🗑️ Webview Removed");
+    }
+};
+
+function renderCustomTabs() {
+    const container = document.getElementById('custom-tabs-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    settings.customTabs.forEach(tab => {
+        const btn = document.createElement('button');
+        btn.id = `btn-tab-${tab.id}`;
+        btn.className = settings.currentMode === tab.id ? 'active' : '';
+        btn.innerHTML = `
+            <span class="icon">${tab.emoji || '🌐'}</span>
+            <span class="label">${tab.name}</span>
+        `;
+
+        btn.onclick = () => {
+            // Toggle visibility in current mode
+            const isShowing = settings.layouts[settings.currentMode]?.includes(tab.id);
+            toggleView(tab.id, !isShowing);
+            
+            // Highlight sidebar if on (optional)
+            renderCustomTabs();
+        };
+
+        btn.oncontextmenu = (e) => {
+            e.preventDefault();
+            openEditCustomTab(tab.id);
+        };
+
+        // Active state based on visibility in current mode
+        if (settings.layouts[settings.currentMode]?.includes(tab.id)) {
+            btn.classList.add('active');
+        }
+
+        container.appendChild(btn);
+    });
+}
+
+function syncCustomPanels() {
+    const container = document.getElementById('webview-container');
+    settings.customTabs.forEach(tab => {
+        if (!panels[tab.id]) {
+            // Create Panel
+            const panel = document.createElement('div');
+            panel.className = 'view-panel hidden';
+            panel.id = `panel-${tab.id}`;
+            panel.setAttribute('data-id', tab.id);
+            
+            panel.innerHTML = `
+                <div class="view-header">
+                    <div style="display:flex; align-items:center; flex: 1;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title" style="margin-right:10px;">${tab.name}</span>
+                        <input type="text" class="address-bar dynamic-addr" placeholder="Enter URL..." value="${tab.url}"
+                            style="flex: 1; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: white; padding: 0 10px; font-size: 0.75rem; outline: none;">
+                    </div>
+                    <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
+                        <button class="btn-move-left" title="Move Left">◀</button>
+                        <button class="btn-move-right" title="Move Right">▶</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-${tab.id}" src="${tab.url}" partition="persist:${tab.id}" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+            `;
+
+            container.appendChild(panel);
+            panels[tab.id] = panel;
+            const wv = panel.querySelector('webview');
+            webviews[tab.id] = wv;
+
+            // Address Bar Logic for dynamic panel
+            const addr = panel.querySelector('.dynamic-addr');
+            addr.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    let val = addr.value.trim();
+                    if (val && !val.startsWith('http')) val = 'https://' + val;
+                    wv.src = val;
+                    addr.blur();
+                }
+            });
+            wv.addEventListener('did-navigate', () => addr.value = wv.getURL());
+            wv.addEventListener('did-navigate-in-page', () => addr.value = wv.getURL());
+
+            // standard actions
+            panel.querySelector('.btn-focus').onclick = () => panel.classList.toggle('fullscreen');
+            panel.querySelector('.btn-reload').onclick = () => wv.reload();
+            panel.querySelector('.btn-close-panel').onclick = () => toggleView(tab.id, false);
+            
+            // Move logic
+            panel.querySelector('.btn-move-left').onclick = () => movePanel(tab.id, -1);
+            panel.querySelector('.btn-move-right').onclick = () => movePanel(tab.id, 1);
+        } else {
+            const title = panels[tab.id].querySelector('.view-title');
+            if (title) title.innerText = tab.name;
+        }
+    });
+
+    // Ensure all panels (including dynamic ones) follow the panelOrder if they are visible
+    // Wait, dynamic panels should probably be added to panelOrder too!
+    settings.customTabs.forEach(tab => {
+        if (!settings.panelOrder.includes(tab.id)) {
+            settings.panelOrder.push(tab.id);
+        }
+    });
+
+    // Final DOM Sort
+    settings.panelOrder.forEach(id => {
+        const p = panels[id];
+        if (p) container.appendChild(p);
+    });
+}
+
+
 // Open Store Hook
 if (btnOpenStore) {
     btnOpenStore.onclick = () => {
@@ -2269,8 +2598,12 @@ if (btnOpenStore) {
     };
 }
 
-// Initial Sidebar Community Render
-setTimeout(renderSidebarCommunityModes, 500);
+// Initial Sidebar Community & Custom Tabs Render
+setTimeout(() => {
+    renderSidebarCommunityModes();
+    renderCustomTabs();
+    syncCustomPanels();
+}, 500);
 
 // Auto Updater Listeners
 if (window.electronAPI) {
