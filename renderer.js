@@ -807,8 +807,8 @@ function switchMode(mode) {
         if (panels[p]) removeGDToolbarFromPanel(panels[p]);
     });
 
-    const gdTools = document.getElementById('gd-tools');
-    if (gdTools) gdTools.style.display = 'none';
+    const btnEditCustomTools = document.getElementById('btn-edit-custom-tools');
+    if (btnEditCustomTools) btnEditCustomTools.style.display = (mode === 'graphic-design') ? 'inline-block' : 'none';
 
     renderPrompts(mode);
 
@@ -2483,26 +2483,40 @@ function renderLinkManagerList() {
     links.forEach((link, idx) => {
         const item = document.createElement('div');
         item.className = 'link-item';
+        item.style = "display: flex; flex-direction: column; gap: 5px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); position: relative;";
         item.innerHTML = `
-            <span style="font-size: 1.2rem; cursor: default;">${link.icon || '🔗'}</span>
-            <input type="text" value="${link.name}" placeholder="Shortcut Name">
-            <button class="delete-btn" title="Remove" data-index="${idx}">✕</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem; cursor: default;">${link.icon || '📌'}</span>
+                <input type="text" class="link-name-input" value="${link.name}" placeholder="Name" style="background: transparent; border: none; color: white; font-weight: bold; flex: 1; outline: none;">
+                <button class="delete-btn" title="Remove" style="margin-left: auto;">✕</button>
+            </div>
+            <input type="text" class="link-url-input" value="${link.url}" placeholder="URL" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-size: 0.75rem; border-radius: 4px; padding: 2px 8px; width: 100%; outline: none;">
         `;
         
-        // Handle Name Change
-        const input = item.querySelector('input');
-        input.onchange = (e) => {
+        const nameInput = item.querySelector('.link-name-input');
+        const urlInput = item.querySelector('.link-url-input');
+
+        nameInput.onchange = (e) => {
             link.name = e.target.value;
             saveSettings();
             refreshPanelToolbar(currentManagingProvider);
         };
 
-        // Handle Delete
-        item.querySelector('.delete-btn').onclick = () => {
-            links.splice(idx, 1);
+        urlInput.onchange = (e) => {
+            let val = e.target.value.trim();
+            if (val && !val.startsWith('http')) val = 'https://' + val;
+            link.url = val;
             saveSettings();
-            renderLinkManagerList();
             refreshPanelToolbar(currentManagingProvider);
+        };
+
+        item.querySelector('.delete-btn').onclick = () => {
+            if (confirm(`Delete shortcut "${link.name}"?`)) {
+                links.splice(idx, 1);
+                saveSettings();
+                renderLinkManagerList();
+                refreshPanelToolbar(currentManagingProvider);
+            }
         };
 
         linkManagerList.appendChild(item);
