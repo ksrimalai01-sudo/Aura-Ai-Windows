@@ -428,6 +428,12 @@ function toggleView(provider, show) {
         // Custom tab button highlight
         const tabBtn = document.getElementById(`btn-tab-${provider}`);
         if (tabBtn) tabBtn.classList.add('active');
+
+        // Design Toolbar for Graphic Design Mode (Limited to Inspiration & Custom Workspace only)
+        const isDesignTool = provider === 'custom' || provider.startsWith('custom-');
+        if (settings.currentMode === 'graphic-design' && isDesignTool) {
+            injectGDToolbarToPanel(panel);
+        }
         
         // Hide dashboard if any panel is shown
         if (panels.dashboard) panels.dashboard.classList.add('hidden');
@@ -795,8 +801,11 @@ function switchMode(mode) {
 
     settings.currentMode = mode;
 
-    // Hide all panels
-    Object.keys(panels).forEach(p => toggleView(p, false));
+    // Hide all panels and cleanup toolbars
+    Object.keys(panels).forEach(p => {
+        toggleView(p, false);
+        if (panels[p]) removeGDToolbarFromPanel(panels[p]);
+    });
 
     const gdTools = document.getElementById('gd-tools');
     if (gdTools) gdTools.style.display = 'none';
@@ -833,15 +842,13 @@ function switchMode(mode) {
             const customTitle = document.getElementById('custom-ai-title');
             if (customTitle) customTitle.innerText = "Inspiration (Pinterest)";
             
-            const gdTools = document.getElementById('gd-tools');
-            if (gdTools) gdTools.style.display = 'flex';
-
             const wvCustom = webviews['custom'];
-            if (wvCustom && wvCustom.src === 'about:blank') {
-                wvCustom.src = "https://www.pinterest.com";
-                // Reset active button to Pinterest initially
-                const pinBtn = document.querySelector('.gd-tool-btn[data-url="https://www.pinterest.com"]');
-                if (pinBtn) pinBtn.click();
+            const customAddr = document.getElementById('custom-ai-address');
+            
+            if (wvCustom && (wvCustom.src === 'about:blank' || !wvCustom.src)) {
+                const defaultUrl = "https://www.pinterest.com";
+                wvCustom.src = defaultUrl;
+                if (customAddr) customAddr.value = defaultUrl;
             }
 
             toggleView('chatgpt', true); // For prompt engineering
@@ -1047,7 +1054,13 @@ let settings = {
     communityModes: [],
     customPrompts: null, // null means use defaultPrompts
     useApiMode: false,
-    openRouterKey: ''
+    openRouterKey: '',
+    customAIQuickLinks: [
+        { name: 'Pinterest', url: 'https://pinterest.com', icon: '📌' },
+        { name: 'Canva', url: 'https://canva.com', icon: '🎨' },
+        { name: 'Adobe Firefly', url: 'https://firefly.adobe.com', icon: '🔥' },
+        { name: 'PromptHero', url: 'https://prompthero.com', icon: '🦸' }
+    ]
 };
 
 function applySettingsToUI() {
@@ -2421,10 +2434,88 @@ if (btnAddCustomTab) btnAddCustomTab.onclick = () => {
     document.getElementById('custom-tab-url').value = "";
     document.getElementById('custom-tab-emoji').value = "🌐";
     if (btnDeleteCustomTabConfirm) btnDeleteCustomTabConfirm.style.display = 'none';
+    const linkContainer = document.getElementById('custom-tab-links-container');
+    if (linkContainer) linkContainer.style.display = 'none';
     customTabOverlay.classList.remove('hidden');
 };
 
 if (btnCloseCustomTabModal) btnCloseCustomTabModal.onclick = () => customTabOverlay.classList.add('hidden');
+
+// Shortcut Manager UI Constants
+const linkManagerOverlay = document.getElementById('link-manager-overlay');
+const linkManagerList = document.getElementById('link-manager-list');
+const btnCloseLinkManager = document.getElementById('btn-close-link-manager');
+const btnSaveLinkManager = document.getElementById('btn-save-link-manager');
+let currentManagingProvider = null;
+
+if (btnCloseLinkManager) btnCloseLinkManager.onclick = () => linkManagerOverlay.classList.add('hidden');
+if (btnSaveLinkManager) btnSaveLinkManager.onclick = () => linkManagerOverlay.classList.add('hidden');
+
+// Open Editor for Inspiration (Custom AI) Header Button
+const btnEditCustomTools = document.getElementById('btn-edit-custom-tools');
+if (btnEditCustomTools) {
+    btnEditCustomTools.onclick = () => openShortcutManager('custom');
+}
+
+function openShortcutManager(provider) {
+    currentManagingProvider = provider;
+    renderLinkManagerList();
+    linkManagerOverlay.classList.remove('hidden');
+}
+
+function renderLinkManagerList() {
+    if (!linkManagerList) return;
+    linkManagerList.innerHTML = '';
+    
+    let links = [];
+    if (currentManagingProvider === 'custom') {
+        links = settings.customAIQuickLinks || [];
+    } else {
+        const tab = settings.customTabs.find(t => t.id === currentManagingProvider);
+        links = tab ? (tab.quickLinks || []) : [];
+    }
+
+    if (links.length === 0) {
+        linkManagerList.innerHTML = '<p style="text-align:center; color:rgba(255,255,255,0.3); font-size:0.8rem; padding:20px;">No shortcuts added yet.</p>';
+        return;
+    }
+
+    links.forEach((link, idx) => {
+        const item = document.createElement('div');
+        item.className = 'link-item';
+        item.innerHTML = `
+            <span style="font-size: 1.2rem; cursor: default;">${link.icon || '🔗'}</span>
+            <input type="text" value="${link.name}" placeholder="Shortcut Name">
+            <button class="delete-btn" title="Remove" data-index="${idx}">✕</button>
+        `;
+        
+        // Handle Name Change
+        const input = item.querySelector('input');
+        input.onchange = (e) => {
+            link.name = e.target.value;
+            saveSettings();
+            refreshPanelToolbar(currentManagingProvider);
+        };
+
+        // Handle Delete
+        item.querySelector('.delete-btn').onclick = () => {
+            links.splice(idx, 1);
+            saveSettings();
+            renderLinkManagerList();
+            refreshPanelToolbar(currentManagingProvider);
+        };
+
+        linkManagerList.appendChild(item);
+    });
+}
+
+function refreshPanelToolbar(provider) {
+    const panel = panels[provider];
+    if (panel) {
+        removeGDToolbarFromPanel(panel);
+        injectGDToolbarToPanel(panel);
+    }
+}
 
 function openEditCustomTab(id) {
     const tab = settings.customTabs.find(t => t.id === id);
@@ -2434,6 +2525,28 @@ function openEditCustomTab(id) {
     document.getElementById('custom-tab-name').value = tab.name;
     document.getElementById('custom-tab-url').value = tab.url;
     document.getElementById('custom-tab-emoji').value = tab.emoji || "🌐";
+    
+    // Show Shortcuts section in the edit modal too
+    const linksContainer = document.getElementById('custom-tab-links-container');
+    const linksList = document.getElementById('custom-tab-links-list');
+    if (linksContainer && linksList) {
+        linksContainer.style.display = 'block';
+        linksList.innerHTML = '';
+        const links = tab.quickLinks || [];
+        links.forEach((link, idx) => {
+            const div = document.createElement('div');
+            div.style = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:5px 8px; border-radius:4px; font-size:0.75rem;";
+            div.innerHTML = `<span>${link.icon || '🔗'} ${link.name}</span> <button style="background:none; border:none; color:#ef4444; cursor:pointer;" data-index="${idx}">✕</button>`;
+            div.querySelector('button').onclick = () => {
+                links.splice(idx, 1);
+                saveSettings();
+                openEditCustomTab(id); // Reload
+                refreshPanelToolbar(id);
+            };
+            linksList.appendChild(div);
+        });
+    }
+
     if (btnDeleteCustomTabConfirm) btnDeleteCustomTabConfirm.style.display = 'block';
     customTabOverlay.classList.remove('hidden');
 }
@@ -2625,7 +2738,7 @@ function syncCustomPanels() {
             panel.querySelector('.btn-move-left').onclick = () => movePanel(tab.id, -1);
             panel.querySelector('.btn-move-right').onclick = () => movePanel(tab.id, 1);
 
-            // Universal Design Toolbar Injection
+            // Design Toolbar for Graphic Design Mode (Custom Workspaces Only)
             if (settings.currentMode === 'graphic-design') {
                 injectGDToolbarToPanel(panel);
             }
@@ -2640,6 +2753,7 @@ function syncCustomPanels() {
         if (!settings.panelOrder.includes(tab.id)) {
             settings.panelOrder.push(tab.id);
         }
+        if (!tab.quickLinks) tab.quickLinks = []; // Migration for existing tabs
     });
 
     // Final DOM Sort
@@ -2652,26 +2766,78 @@ function syncCustomPanels() {
 function injectGDToolbarToPanel(panel) {
     if (panel.querySelector('.gd-inline-tools')) return;
     const actions = panel.querySelector('.view-actions');
+    const provider = panel.getAttribute('data-id');
     if (!actions) return;
+
+    // Determine which quick links to use
+    let links = [];
+    if (provider === 'custom') {
+        links = settings.customAIQuickLinks || [];
+    } else if (provider.startsWith('custom-')) {
+        const tab = settings.customTabs.find(t => t.id === provider);
+        links = tab ? (tab.quickLinks || []) : [];
+    }
 
     const gdTools = document.createElement('div');
     gdTools.className = 'gd-inline-tools';
-    gdTools.style = "display:flex; gap:4px; margin-right:10px; padding-right:10px; border-right:1px solid rgba(255,255,255,0.1);";
-    gdTools.innerHTML = `
-        <button class="icon-only-btn gd-tool-btn" data-url="https://pinterest.com" title="Pinterest">📌</button>
-        <button class="icon-only-btn gd-tool-btn" data-url="https://canva.com" title="Canva">🎨</button>
-        <button class="icon-only-btn gd-tool-btn" data-url="https://firefly.adobe.com" title="Adobe Firefly">🔥</button>
-        <button class="icon-only-btn gd-tool-btn" data-url="https://prompthero.com" title="PromptHero">🦸</button>
-    `;
-
-    gdTools.querySelectorAll('button').forEach(btn => {
+    gdTools.style = "display:flex; gap:4px; margin-right:10px; padding-right:10px; border-right:1px solid rgba(255,255,255,0.1); align-items: center;";
+    
+    // Render dynamic links
+    links.forEach(link => {
+        const btn = document.createElement('button');
+        btn.className = "icon-only-btn gd-tool-btn";
+        btn.title = link.name;
+        btn.innerHTML = link.icon || '🔗';
         btn.onclick = () => {
             const wv = panel.querySelector('webview');
-            if (wv) wv.src = btn.getAttribute('data-url');
+            if (wv) wv.src = link.url;
         };
+        gdTools.appendChild(btn);
     });
 
+    // Add "+" button to pin current page
+    const btnAdd = document.createElement('button');
+    btnAdd.className = "icon-only-btn gd-tool-btn";
+    btnAdd.style = "opacity: 0.4; font-size: 0.8rem; margin-left: 4px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 4px; width: 20px; height: 20px;";
+    btnAdd.title = "Add Current Page to Shortcuts";
+    btnAdd.innerHTML = "➕";
+    btnAdd.onclick = () => quickAddShortcut(panel);
+    gdTools.appendChild(btnAdd);
+
     actions.parentNode.insertBefore(gdTools, actions);
+}
+
+function quickAddShortcut(panel) {
+    const wv = panel.querySelector('webview');
+    const provider = panel.getAttribute('data-id');
+    if (!wv) return;
+
+    const url = wv.getURL();
+    const title = wv.getTitle() || "Untitled";
+    
+    const newLink = { name: title, url: url, icon: '📌' };
+
+    if (provider === 'custom') {
+        if (!settings.customAIQuickLinks) settings.customAIQuickLinks = [];
+        settings.customAIQuickLinks.push(newLink);
+    } else {
+        const tab = settings.customTabs.find(t => t.id === provider);
+        if (tab) {
+            if (!tab.quickLinks) tab.quickLinks = [];
+            tab.quickLinks.push(newLink);
+        }
+    }
+
+    saveSettings();
+    // Refresh the toolbar
+    removeGDToolbarFromPanel(panel);
+    injectGDToolbarToPanel(panel);
+    showToast(`📍 Pinned: ${title}`);
+}
+
+function removeGDToolbarFromPanel(panel) {
+    const gdTools = panel.querySelector('.gd-inline-tools');
+    if (gdTools) gdTools.remove();
 }
 
 // --- Quick Switcher Logic ---

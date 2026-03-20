@@ -352,12 +352,7 @@
                     <div style="display:flex; align-items:center;">
                         <span class="status-dot" title="Ready"></span>
                         <span id="custom-ai-title" class="view-title">Custom AI</span>
-                        <div id="gd-tools" style="display: none; margin-left: 15px; gap: 5px; align-items: center;">
-                            <button class="gd-tool-btn" data-url="https://www.pinterest.com" style="background:var(--accent); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Pinterest</button>
-                            <button class="gd-tool-btn" data-url="https://www.canva.com" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:0.2s;">Canva</button>
-                            <button class="gd-tool-btn" data-url="https://firefly.adobe.com" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:0.2s;">Firefly</button>
-                            <button class="gd-tool-btn" data-url="https://prompthero.com" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:0.2s;">PromptHero</button>
-                        </div>
+                        <button id="btn-edit-custom-tools" title="Manage Quick Shortcuts" style="background:none; border:none; cursor:pointer; font-size:0.7rem; opacity:0.5; margin-left:5px;">⚙️</button>
                     </div>
                     <div class="view-actions">
                         <input type="text" id="custom-ai-address" class="address-bar" placeholder="Enter URL (e.g. google.com)..." 
@@ -892,6 +887,14 @@
                     <label>Icon (Emoji)</label>
                     <input type="text" id="custom-tab-emoji" value="🌐" style="width: 50px; text-align: center;">
                 </div>
+
+                <!-- NEW: Quick Links Section for Custom Tabs -->
+                <div class="setting-item" id="custom-tab-links-container" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display:none;">
+                    <label>📍 Quick Shortcuts</label>
+                    <div id="custom-tab-links-list" style="margin-top: 5px; display: flex; flex-direction: column; gap: 5px; max-height: 100px; overflow-y: auto;">
+                        <!-- List of links here -->
+                    </div>
+                </div>
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
                     <button id="btn-save-custom-tab" class="save-btn" style="flex: 1;">Save Webview</button>
                     <button id="btn-delete-custom-tab-confirm" class="save-btn" style="flex: 1; background: #ef4444; display: none;">Delete</button>
@@ -912,6 +915,25 @@
             </div>
             <div style="padding:10px; font-size: 0.7rem; color: rgba(255,255,255,0.4); text-align: center; border-top:1px solid rgba(255,255,255,0.05);">
                 ↑↓ to navigate • ↵ to select • Esc to close
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Shortcuts Modal -->
+    <div id="link-manager-overlay" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 400px; padding: 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">📍 Manage Shortcuts</h2>
+                <button id="btn-close-link-manager" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">✕</button>
+            </header>
+            <div id="link-manager-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                <!-- Shortcut items injected here -->
+            </div>
+            <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-align: center; margin-bottom: 20px;">
+                Tip: Use the ➕ button in any workspace header to pin the current page as a shortcut.
+            </p>
+            <div style="display: flex; justify-content: flex-end;">
+                <button id="btn-save-link-manager" class="save-btn" style="width: 100%;">Done</button>
             </div>
         </div>
     </div>
