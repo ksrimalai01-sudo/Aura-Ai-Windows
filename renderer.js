@@ -486,8 +486,16 @@ function renderToggles() {
 
     const names = {
         gemini: 'Gemini', chatgpt: 'ChatGPT', claude: 'Claude',
-        deepseek: 'DeepSeek', leonardo: 'Leonardo AI', api: '🌟 Aura Pro', custom: settings.customAIName || 'Custom AI'
+        deepseek: 'DeepSeek', leonardo: 'Leonardo AI', api: '🌟 Aura Pro', 
+        custom: (settings.currentMode === 'graphic-design') ? '🎨 Inspiration' : (settings.customAIName || 'Custom AI')
     };
+
+    // Add custom tab names
+    if (settings.customTabs) {
+        settings.customTabs.forEach(tab => {
+            names[tab.id] = tab.name;
+        });
+    }
 
     settings.panelOrder.forEach(provider => {
         if (provider === 'gemini' && settings.showGemini === false) return;
@@ -603,7 +611,16 @@ document.getElementById('webview-container').addEventListener('click', (e) => {
 
 // Title bar logic moved to top
 
-// --- Section removed due to duplication ---
+// Hide All Panels Logic
+const btnHideAll = document.getElementById('btn-hide-all-panels');
+if (btnHideAll) {
+    btnHideAll.onclick = () => {
+        Object.keys(panels).forEach(id => {
+            if (id !== 'dashboard') toggleView(id, false);
+        });
+        saveLayoutState();
+    };
+}
 
 // Prompt Data / プロンプトデータ / ข้อมูลคำสั่ง
 let customPrompts = {}; // loaded from settings
@@ -868,11 +885,12 @@ function updateHubSelectorLabels(mode) {
     
     const customOption = hubSelector.querySelector('option[value="custom"]');
     if (customOption) {
-        if (mode === 'graphic-design') {
-            customOption.innerText = '🎨 Inspiration';
-        } else {
-            customOption.innerText = 'Custom AI';
-        }
+        const label = (mode === 'graphic-design') ? '🎨 Inspiration' : 'Custom AI';
+        customOption.innerText = label;
+        
+        // Also update the toggle chip if it exists
+        const toggleBtn = document.querySelector(`.ai-toggle[data-provider="custom"]`);
+        if (toggleBtn) toggleBtn.innerText = label;
     }
 }
 
@@ -2480,33 +2498,59 @@ function renderCustomTabs() {
     if (!container) return;
     container.innerHTML = '';
 
-    settings.customTabs.forEach(tab => {
-        const btn = document.createElement('button');
+    settings.customTabs.forEach((tab, index) => {
+        const btn = document.createElement('div'); // Using div for better drag handle support
         btn.id = `btn-tab-${tab.id}`;
-        btn.className = settings.currentMode === tab.id ? 'active' : '';
+        btn.className = 'sidebar-btn-wrapper';
+        btn.draggable = true;
+        
+        const isVisible = settings.layouts[settings.currentMode]?.includes(tab.id);
+        const iconContent = tab.favicon ? `<img src="${tab.favicon}" style="width:16px; height:16px; border-radius:2px; vertical-align:middle;">` : (tab.emoji || '🌐');
+        
         btn.innerHTML = `
-            <span class="icon">${tab.emoji || '🌐'}</span>
-            <span class="label">${tab.name}</span>
+            <button class="sidebar-btn ${isVisible ? 'active' : ''}">
+                <span class="icon" id="tab-icon-${tab.id}">${iconContent}</span>
+                <span class="label">${tab.name}</span>
+            </button>
+            <button class="sidebar-action-btn" id="btn-edit-tab-${tab.id}">⋮</button>
         `;
 
-        btn.onclick = () => {
-            // Toggle visibility in current mode
+        const mainBtn = btn.querySelector('.sidebar-btn');
+        mainBtn.onclick = () => {
             const isShowing = settings.layouts[settings.currentMode]?.includes(tab.id);
             toggleView(tab.id, !isShowing);
-            
-            // Highlight sidebar if on (optional)
             renderCustomTabs();
         };
 
-        btn.oncontextmenu = (e) => {
+        btn.querySelector('.sidebar-action-btn').onclick = (e) => {
             e.preventDefault();
             openEditCustomTab(tab.id);
         };
 
-        // Active state based on visibility in current mode
-        if (settings.layouts[settings.currentMode]?.includes(tab.id)) {
-            btn.classList.add('active');
-        }
+        // --- Drag and Drop ---
+        btn.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', index);
+            btn.classList.add('dragging');
+        };
+        btn.ondragend = () => btn.classList.remove('dragging');
+        btn.ondragover = (e) => {
+            e.preventDefault();
+            btn.classList.add('drag-over');
+        };
+        btn.ondragleave = () => btn.classList.remove('drag-over');
+        btn.ondrop = (e) => {
+            e.preventDefault();
+            btn.classList.remove('drag-over');
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = index;
+            if (fromIndex !== toIndex) {
+                const temp = settings.customTabs[fromIndex];
+                settings.customTabs.splice(fromIndex, 1);
+                settings.customTabs.splice(toIndex, 0, temp);
+                localStorage.setItem('aura_settings', JSON.stringify(settings));
+                renderCustomTabs();
+            }
+        };
 
         container.appendChild(btn);
     });
@@ -2559,6 +2603,19 @@ function syncCustomPanels() {
             wv.addEventListener('did-navigate', () => addr.value = wv.getURL());
             wv.addEventListener('did-navigate-in-page', () => addr.value = wv.getURL());
 
+            // Auto-Favicon Support
+            wv.addEventListener('page-favicon-updated', (e) => {
+                if (e.favicons && e.favicons.length > 0) {
+                    const iconUrl = e.favicons[0];
+                    if (tab.favicon !== iconUrl) {
+                        tab.favicon = iconUrl;
+                        const iconEl = document.getElementById(`tab-icon-${tab.id}`);
+                        if (iconEl) iconEl.innerHTML = `<img src="${iconUrl}" style="width:16px; height:16px; border-radius:2px; vertical-align:middle;">`;
+                        localStorage.setItem('aura_settings', JSON.stringify(settings));
+                    }
+                }
+            });
+
             // standard actions
             panel.querySelector('.btn-focus').onclick = () => panel.classList.toggle('fullscreen');
             panel.querySelector('.btn-reload').onclick = () => wv.reload();
@@ -2567,6 +2624,11 @@ function syncCustomPanels() {
             // Move logic
             panel.querySelector('.btn-move-left').onclick = () => movePanel(tab.id, -1);
             panel.querySelector('.btn-move-right').onclick = () => movePanel(tab.id, 1);
+
+            // Universal Design Toolbar Injection
+            if (settings.currentMode === 'graphic-design') {
+                injectGDToolbarToPanel(panel);
+            }
         } else {
             const title = panels[tab.id].querySelector('.view-title');
             if (title) title.innerText = tab.name;
@@ -2574,7 +2636,6 @@ function syncCustomPanels() {
     });
 
     // Ensure all panels (including dynamic ones) follow the panelOrder if they are visible
-    // Wait, dynamic panels should probably be added to panelOrder too!
     settings.customTabs.forEach(tab => {
         if (!settings.panelOrder.includes(tab.id)) {
             settings.panelOrder.push(tab.id);
@@ -2587,6 +2648,135 @@ function syncCustomPanels() {
         if (p) container.appendChild(p);
     });
 }
+
+function injectGDToolbarToPanel(panel) {
+    if (panel.querySelector('.gd-inline-tools')) return;
+    const actions = panel.querySelector('.view-actions');
+    if (!actions) return;
+
+    const gdTools = document.createElement('div');
+    gdTools.className = 'gd-inline-tools';
+    gdTools.style = "display:flex; gap:4px; margin-right:10px; padding-right:10px; border-right:1px solid rgba(255,255,255,0.1);";
+    gdTools.innerHTML = `
+        <button class="icon-only-btn gd-tool-btn" data-url="https://pinterest.com" title="Pinterest">📌</button>
+        <button class="icon-only-btn gd-tool-btn" data-url="https://canva.com" title="Canva">🎨</button>
+        <button class="icon-only-btn gd-tool-btn" data-url="https://firefly.adobe.com" title="Adobe Firefly">🔥</button>
+        <button class="icon-only-btn gd-tool-btn" data-url="https://prompthero.com" title="PromptHero">🦸</button>
+    `;
+
+    gdTools.querySelectorAll('button').forEach(btn => {
+        btn.onclick = () => {
+            const wv = panel.querySelector('webview');
+            if (wv) wv.src = btn.getAttribute('data-url');
+        };
+    });
+
+    actions.parentNode.insertBefore(gdTools, actions);
+}
+
+// --- Quick Switcher Logic ---
+let qsSelectedIndex = 0;
+let qsVisibleItems = [];
+
+function openQuickSwitcher() {
+    const overlay = document.getElementById('quick-switcher-overlay');
+    const input = document.getElementById('quick-switcher-input');
+    if (!overlay || !input) return;
+    overlay.classList.remove('hidden');
+    input.value = '';
+    input.focus();
+    qsSelectedIndex = 0;
+    renderQSResults('');
+}
+
+function renderQSResults(query) {
+    const resultsContainer = document.getElementById('quick-switcher-results');
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = '';
+    
+    // Combine all possible targets
+    const allItems = [
+        { id: 'gemini', name: 'Gemini', icon: '♊' },
+        { id: 'chatgpt', name: 'ChatGPT', icon: '🤖' },
+        { id: 'claude', name: 'Claude', icon: '🧠' },
+        { id: 'deepseek', name: 'DeepSeek', icon: '🔍' },
+        { id: 'leonardo', name: 'Leonardo AI', icon: '🎨' },
+        { id: 'api', name: '🌟 Aura Pro', icon: '✨' },
+        ...settings.customTabs.map(t => ({ id: t.id, name: t.name, icon: t.emoji || '🌐', favicon: t.favicon }))
+    ];
+
+    qsVisibleItems = allItems.filter(item => 
+        item.name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    qsVisibleItems.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = `qs-item ${index === qsSelectedIndex ? 'selected' : ''}`;
+        const iconHtml = item.favicon ? `<img src="${item.favicon}" style="width:20px; height:20px; border-radius:3px;">` : item.icon;
+        
+        div.innerHTML = `
+            <div class="icon">${iconHtml}</div>
+            <div class="name">${item.name}</div>
+            <div class="shortcut">↵</div>
+        `;
+        
+        div.onclick = () => {
+            switchToView(item.id);
+            closeQuickSwitcher();
+        };
+        
+        resultsContainer.appendChild(div);
+    });
+}
+
+function switchToView(id) {
+    toggleView(id, true);
+    const wv = webviews[id];
+    if (wv) wv.focus();
+}
+
+function closeQuickSwitcher() {
+    const overlay = document.getElementById('quick-switcher-overlay');
+    if (overlay) overlay.classList.add('hidden');
+}
+
+// Global Keyboard Listeners for Quick Switcher
+window.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+    
+    if (modifier && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openQuickSwitcher();
+    }
+    
+    const overlay = document.getElementById('quick-switcher-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeQuickSwitcher();
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            qsSelectedIndex = (qsSelectedIndex + 1) % Math.max(1, qsVisibleItems.length);
+            renderQSResults(document.getElementById('quick-switcher-input').value);
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            qsSelectedIndex = (qsSelectedIndex - 1 + qsVisibleItems.length) % Math.max(1, qsVisibleItems.length);
+            renderQSResults(document.getElementById('quick-switcher-input').value);
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (qsVisibleItems[qsSelectedIndex]) {
+                switchToView(qsVisibleItems[qsSelectedIndex].id);
+                closeQuickSwitcher();
+            }
+        }
+    }
+});
+
+document.getElementById('quick-switcher-input')?.addEventListener('input', (e) => {
+    qsSelectedIndex = 0;
+    renderQSResults(e.target.value);
+});
 
 
 // Open Store Hook

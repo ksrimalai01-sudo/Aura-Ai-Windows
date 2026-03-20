@@ -162,8 +162,19 @@ if (!gotTheLock) {
         
         createWindow();
         registerGlobalHotkey();
+
+        // [EN] Universal Webview Popup Handler: Ensures all webviews (hardcoded & dynamic)
+        // can open external links in the system browser.
+        app.on('web-contents-created', (e, contents) => {
+            if (contents.getType() === 'webview') {
+                contents.setWindowOpenHandler(({ url }) => {
+                    shell.openExternal(url);
+                    return { action: 'deny' };
+                });
+            }
+        });
         
-        // 🚀 Auto-Updater Logic
+        // ... (rest of the file)
         autoUpdater.checkForUpdatesAndNotify();
         
         autoUpdater.on('update-available', () => {
