@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+    recognizeText: (dataUrl) => ipcRenderer.invoke('recognize-text', dataUrl),
     platform: process.platform,
     isMac: process.platform === 'darwin'
 });

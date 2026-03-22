@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Aura Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            background: transparent !important;
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+            user-select: none;
+            font-family: 'Inter', sans-serif;
+        }
+        #lookupper-bubble {
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            opacity: 1 !important;
+            transform: none !important;
+            box-sizing: border-box !important;
+            background: rgba(26, 26, 26, 0.85) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .bubble-header {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+        }
+        #bubble-content {
+            padding: 12px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        #bubble-fast-result {
+            font-size: 1.1rem;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .vocab-tag {
+            display: inline-block;
+            background: rgba(var(--accent-rgb), 0.1);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 0.7rem;
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
+        }
+        .mode-btn {
+            background: rgba(255,255,255,0.05);
+            border: none;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.65rem;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--accent);
+            opacity: 1;
+        }
+        .fav-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.2);
+            transition: 0.2s;
+        }
+        .fav-btn.active {
+            color: #ffcc00;
+        }
+    </style>
+</head>
+<body>
+    <div id="lookupper-bubble">
+        <div class="bubble-header" style="-webkit-app-region: drag;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span id="bubble-mode-label">✨ Aura Assistant</span>
+                <div style="display: flex; gap: 4px; -webkit-app-region: no-drag;">
+                    <button id="btn-mode-game" class="mode-btn" title="Game Mode">🎮</button>
+                    <button id="btn-mode-movie" class="mode-btn" title="Movie Mode">🎬</button>
+                    <button id="btn-mode-tutor" class="mode-btn" title="Tutor Mode">🧠</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; -webkit-app-region: no-drag;">
+                <button id="btn-bubble-fav" class="fav-btn" title="Favorite">⭐</button>
+                <button id="btn-close-bubble" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">×</button>
+            </div>
+        </div>
+        
+        <div id="bubble-source-container" class="hidden" style="padding: 5px; background: rgba(0,0,0,0.2); text-align: center;">
+            <img id="bubble-source-snippet" style="max-height: 60px; max-width: 100%; border-radius: 4px; opacity: 0.8;">
+        </div>
+
+        <div id="bubble-content">
+            <div id="bubble-fast-result"></div>
+            
+            <div class="loader-wave" id="assistant-loader" style="display:none;">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div id="bubble-inner-content">
+                <div id="bubble-confidence-dot" class="confidence-dot" title="OCR Confidence"></div>
+                <div id="bubble-text-content" style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 8px; font-style: italic;"></div>
+                <div id="bubble-smart-result" class="markdown-body" style="font-size: 0.85rem; line-height: 1.5;"></div>
+            </div>
+            
+            <div id="bubble-vocab-container" style="margin-top: 12px; display: none;">
+                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;">Key Vocabulary</div>
+                <div id="bubble-vocab-list"></div>
+            </div>
+        </div>
+
+        <div class="bubble-actions" style="padding: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-bubble-tts" class="icon-only-btn" title="Speak">🔊</button>
+                <button id="btn-bubble-notion" class="icon-only-btn" title="Save to Notion">📓</button>
+            </div>
+            <button id="btn-bubble-settings" class="icon-only-btn" title="Settings">⚙️</button>
+        </div>
+    </div>
+
+    <script src="assistant.js"></script>
+</body>
+</html>

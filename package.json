@@ -20,7 +20,11 @@
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
-    "firebase": "^12.10.0"
+    "firebase": "^12.10.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "node-windows-ocr": "^1.1.1"
   },
   "overrides": {
     "yauzl": "^3.2.1"
