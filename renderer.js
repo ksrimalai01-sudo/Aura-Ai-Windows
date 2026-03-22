@@ -46,11 +46,729 @@ function updateUIShortcuts() {
 window.addEventListener('DOMContentLoaded', updateUIShortcuts);
 
 // Authentication Logic
-let currentUser = null;
-window.USER_DOC_REF = null;
-let lastPrompt = '';
+// Global registries moved below
 
-// Title Bar Controls
+const defaultPrompts = {
+    general: [
+        { label: "💡 Brainstorm", text: "Give me 5 creative ideas for [YOUR TOPIC]:" },
+        { label: "📝 Summarize", text: "Please summarize the following text into 3 bullet points:\n\n[PASTE SENTENCE]" },
+        { label: "🔍 Explain Like I'm 5", text: "Explain [YOUR TOPIC] as if I am 5 years old:" },
+        { label: "✍️ Rewrite Pro", text: "Rewrite the following text to sound more professional and concise:\n\n[PASTE SENTENCE]" },
+        { label: "💻 Code Helper", text: "How do I implement [YOUR TOPIC] in JavaScript?" }
+    ],
+    ecommerce: [
+        { label: "📸 Product Desc", text: "Create a minimalist product description for [YOUR PRODUCT]:" },
+        { label: "✉️ Email Marketing", text: "Write a high-converting email about [YOUR TOPIC]:" },
+        { label: "🏷️ Ad Headlines", text: "Generate 5 catchy Facebook ad headlines for [YOUR PRODUCT]:" },
+        { label: "🎬 AI Video Ads", text: "คุณคือ AI สร้าง prompt วิดีโอสินค้าแบบมืออาชีพ\n\nโจทย์: [YOUR TOPIC]" }
+    ],
+    japanese: [
+        { label: "📝 Grammar Breakdown", text: "Please break down the grammar and particles of this sentence: [PASTE SENTENCE]" },
+        { label: "🔄 Natural", text: "Translate this to natural Japanese (polite/casual): [YOUR TEXT]" },
+        { label: "🈁 Kanji Analysis", text: "Explain the Kanji components and readings of: [YOUR KANJI]" }
+    ],
+    "graphic-design": [
+        { label: "🎨 Image Prompt", text: "Create a highly detailed image generation prompt for Leonardo AI based on this idea: [YOUR IDEA]. Include lighting, style, and camera angles." },
+        { label: "🖌️ Color Palette", text: "Suggest 3 unique color palettes (with hex codes) for a project about [YOUR TOPIC]. Explain the mood of each." }
+    ]
+};
+
+const defaultCustomPrompts = [
+    { name: "💡 Brainstorm", text: "Give me 5 creative ideas for [YOUR TOPIC]:" },
+    { name: "📝 Summarize", text: "Please summarize the following text into 3 bullet points:\n\n[PASTE SENTENCE]" },
+    { name: "🔍 Explain Like I'm 5", text: "Explain [YOUR TOPIC] as if I am 5 years old:" },
+    { name: "✍️ Rewrite Pro", text: "Rewrite the following text to sound more professional and concise:\n\n[PASTE SENTENCE]" },
+    { name: "💻 Code Helper", text: "How do I implement [YOUR TOPIC] in JavaScript?" },
+    { name: "🎬 AI Video Ads", text: "คุณคือ AI สร้าง prompt วิดีโอสินค้าแบบมืออาชีพ\n\nโจทย์: [YOUR TOPIC]" },
+    { name: "Natural Thai", text: "ช่วยแปลประโยคนี้เป็นภาษาไทยที่ฟังดูเป็นธรรมชาติ:\n\n[YOUR TEXT]" },
+    { name: "Grammar Check", text: "ช่วยตรวจสอบไวยากรณ์และแก้ไขประโยคนี้ให้ถูกต้อง:\n\n[YOUR TEXT]" }
+];
+
+const defaultSettings = {
+    theme: 'dark',
+    username: '',
+    provider: 'gemini',
+    currentMode: 'general',
+    autoSend: false,
+    usePrefix: false,
+    prefix: 'I am studying {}.',
+    useSuffix: true,
+    suffix: ' Please explain in Thai.',
+    autoRead: false,
+    showEcommerce: true,
+    showJapanese: true,
+    showGraphicDesign: true,
+    showGemini: true,
+    showChatGPT: true,
+    showClaude: true,
+    showDeepSeek: true,
+    showLeonardo: true,
+    showBing: true,
+    showPerplexity: true,
+    showGrok: true,
+    showDuck: true,
+    showCustomAI: false,
+    customAIName: 'Custom AI',
+    customAIUrl: '',
+    customAIQuickLinks: [],
+    useApiMode: false,
+    openRouterKey: '',
+    layoutStyle: 'scroll',
+    layouts: {
+        general: ['gemini', 'chatgpt'],
+        ecommerce: ['gemini', 'leonardo'],
+        japanese: ['gemini', 'claude'],
+        'graphic-design': ['chatgpt', 'leonardo', 'custom']
+    },
+    panelOrder: ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'bing', 'perplexity', 'grok', 'duck', 'api', 'custom'],
+    customPrompts: null, // Initialized from defaultPrompts if empty
+    communityAlias: '',
+    communityModes: [],
+    customTabs: [],
+    // New Professional Settings
+    autoOpenSidebar: true,
+    autoHideSidebar: false,
+    addAiIconTop: true,
+    autoInputOnly: false,
+    labelTopic: '[YOUR TOPIC]',
+    labelProduct: '[YOUR PRODUCT]',
+    labelText: '[YOUR TEXT]',
+    excludeAIs: {
+        chatgpt: false,
+        gemini: false,
+        claude: false,
+        leonardo: false
+    },
+    notionApiKey: '',
+    notionDatabaseId: '',
+    lookupperShortcut: 'Alt+Q',
+    lookupperPrivacy: true,
+    lookupperAutoSpeak: false,
+    lookupperEnabled: true,
+    lookupperMemory: {},
+    scanMode: false,
+    assistantMode: 'tutor',
+
+    // Add-on Platform (Aura AI 3.0)
+    addons: {
+        translateOverlay: { installed: true, enabled: true },
+        ocrEngine: { installed: true, enabled: true },
+        localAI: { installed: false, enabled: false }, // Performance Upgrade
+        aiHub: { installed: true, enabled: true } // Core
+    }
+};
+
+let btnOpenCreateAddon = document.getElementById('btn-open-create-addon');
+let btnCloseCreateAddon = document.getElementById('btn-close-create-addon');
+let btnPublishAddon = document.getElementById('btn-publish-addon');
+let createAddonOverlay = document.getElementById('create-addon-overlay');
+let communityAddonList = document.getElementById('community-addon-list');
+let storeOverlay = document.getElementById('store-overlay');
+
+let settings = JSON.parse(JSON.stringify(defaultSettings));
+
+// Platform Core Helpers (Single Source of Truth)
+function isAddonActive(id) {
+    if (!settings || !settings.addons || !settings.addons[id]) return false;
+    return settings.addons[id].installed && settings.addons[id].enabled;
+}
+
+function updateAddonState(id, props) {
+    if (!settings.addons) settings.addons = {};
+    if (!settings.addons[id]) settings.addons[id] = { installed: false, enabled: false };
+    settings.addons[id] = { ...settings.addons[id], ...props };
+    
+    // Legacy Sync for Lookupper
+    if (id === 'translateOverlay') {
+        settings.lookupperEnabled = settings.addons[id].enabled;
+        window.electronAPI.send('toMain', { 
+            type: 'update-shortcuts', 
+            shortcuts: {
+                ...settings.shortcuts,
+                lookupper: { enabled: settings.addons[id].enabled, key: settings.lookupperShortcut || 'Alt+Q' }
+            } 
+        });
+    }
+
+    // [EN] Sync to Tray Status
+    // [TH] ซิงค์สถานะ Add-on ไปที่ Tray
+    window.electronAPI.send('toMain', { type: 'update-addon-status', addons: settings.addons });
+
+    saveSettings();
+    if (typeof refreshModularUI === 'function') refreshModularUI();
+    if (typeof updateAddonSlotUI === 'function') updateAddonSlotUI();
+}
+
+// --- Aura Lookupper (Aura Assistant) Logic ---
+const lookupperBubble = document.getElementById('lookupper-bubble');
+const bubbleInner = document.getElementById('bubble-inner-content');
+const bubbleLoader = lookupperBubble?.querySelector('.loader-wave');
+
+// OCR Results Cache (LRU-like with 30m TTL)
+const ocrCache = new Map();
+const MAX_CACHE_ENTRIES = 200;
+const CACHE_TTL = 30 * 60 * 1000;
+
+function getCachedResult(imageDataUrl) {
+    const cached = ocrCache.get(imageDataUrl);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        return cached.result;
+    }
+    return null;
+}
+
+function setCachedResult(imageDataUrl, result) {
+    if (ocrCache.size >= MAX_CACHE_ENTRIES) {
+        const firstKey = ocrCache.keys().next().value;
+        ocrCache.delete(firstKey);
+    }
+    ocrCache.set(imageDataUrl, { result, timestamp: Date.now() });
+}
+
+window.electronAPI.receive('fromMain', async (arg) => {
+    if (arg.type === 'shortcut-triggered' && arg.action === 'lookupper') {
+        console.log("Renderer: Received 'lookupper' shortcut trigger. Sending capture request...");
+        window.electronAPI.send('toMain', { type: 'lookupper-capture' });
+    } else if (arg.type === 'lookupper-captured') {
+        processLookupperCapture(arg);
+    } else if (arg.type === 'assistant-action') {
+        if (arg.action === 'tts') triggerTTS(arg.text);
+        else if (arg.action === 'notion') saveToNotion(arg.content);
+        else if (arg.action === 'toggle-favorite') {
+            const word = arg.text.toLowerCase().trim();
+            if (settings.lookupperMemory && settings.lookupperMemory[word]) {
+                settings.lookupperMemory[word].isFavorite = arg.isFavorite;
+                saveSettings();
+                showToast(arg.isFavorite ? "⭐ Added to Favorites" : "🗑️ Removed from Favorites");
+            }
+        }
+    } else if (arg.type === 'assistant-setting') {
+        settings[arg.key] = arg.value;
+        saveSettings();
+        showToast(`⚙️ Assistant Mode: ${arg.value.toUpperCase()}`);
+    } else if (arg.type === 'open-settings') {
+        if (settingsOverlay) {
+            applySettingsToUI();
+            settingsOverlay.classList.remove('hidden');
+        }
+    }
+});
+
+async function processLookupperCapture(arg) {
+    const { data: imageDataUrl, x, y, scaleFactor } = arg;
+    
+    // 1. Show floating assistant immediately and start loading
+    const showSnippet = settings.lookupperPrivacy !== false;
+    window.electronAPI.send('toMain', { 
+        type: 'assistant-show', 
+        x: x + 20, 
+        y: y + 20,
+        data: imageDataUrl,
+        showSnippet: showSnippet
+    });
+
+    // 2. Check Cache
+    const cached = getCachedResult(imageDataUrl);
+    if (cached) {
+        console.log("OCR Cache Hit!");
+        showLookupperBubble(cached, x, y);
+        return;
+    }
+
+    try {
+        // 3. Preprocess Image (Adaptive Thresholding + Upscale)
+        const processedBlob = await preprocessImage(imageDataUrl);
+        // 4. Perform OCR via Main Process IPC
+        const reader = new FileReader();
+        const blobDataUrl = await new Promise(resolve => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(processedBlob);
+        });
+        const ocrResult = await window.electronAPI.recognizeText(blobDataUrl);
+        
+        // 5. Show results with Confidence Indicator
+        if (ocrResult && ocrResult.text) {
+            setCachedResult(imageDataUrl, ocrResult.text);
+            
+            // Confidence Dot Coloring
+            const confDot = document.getElementById('bubble-confidence-dot');
+            if (confDot) {
+                confDot.className = 'confidence-dot'; // Reset
+                const conf = ocrResult.confidence || 0.85; // Fallback if missing
+                if (conf > 0.8) confDot.classList.add('conf-high');
+                else if (conf > 0.5) confDot.classList.add('conf-med');
+                else confDot.classList.add('conf-low');
+            }
+            
+            const textEl = document.getElementById('bubble-text-content');
+            if (textEl) textEl.textContent = ocrResult.text;
+            
+            // Update assistant with OCR text
+            window.electronAPI.send('toMain', { 
+                type: 'assistant-update', 
+                text: ocrResult.text, 
+                confidence: ocrResult.confidence 
+            });
+
+            showLookupperBubble(ocrResult.text, x, y);
+        } else {
+            showLookupperBubbleError("No text detected. Try hovering closer.", x, y);
+        }
+    } catch (e) {
+        console.error("Lookupper Processing Error:", e);
+        showLookupperBubbleError(e.message, x, y);
+    }
+}
+
+async function preprocessImage(dataUrl) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Upscale 2x for better OCR accuracy
+            canvas.width = img.width * 2;
+            canvas.height = img.height * 2;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Adaptive Thresholding logic (Simple Local Mean)
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                // Grayscale
+                const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                // Basic Binarization (will upgrade to adaptive if needed)
+                const v = gray > 128 ? 255 : 0;
+                data[i] = data[i+1] = data[i+2] = v;
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob(resolve, 'image/png');
+        };
+        img.src = dataUrl;
+    });
+}
+
+function showLookupperBubbleLoading(x, y) {
+    if (!lookupperBubble) return;
+    lookupperBubble.classList.remove('hidden');
+    positionBubble(x, y);
+    if (bubbleLoader) bubbleLoader.style.display = 'flex';
+    if (bubbleInner) bubbleInner.innerHTML = '';
+}
+
+function showLookupperBubbleError(msg, x, y) {
+    if (bubbleLoader) bubbleLoader.style.display = 'none';
+    if (bubbleInner) bubbleInner.innerHTML = `<span style="color: #ff4d4d;">Error: ${msg}</span>`;
+    
+    // Notify assistant window of error
+    window.electronAPI.send('toMain', { 
+        type: 'assistant-update', 
+        html: `<span style="color: #ff4d4d;">Error: ${msg}</span>` 
+    });
+}
+
+function positionBubble(x, y) {
+    const bubbleWidth = 320;
+    const bubbleHeight = 350;
+    let finalX = x + 20;
+    let finalY = y + 20;
+    
+    if (finalX + bubbleWidth > window.innerWidth) finalX = window.innerWidth - bubbleWidth - 20;
+    if (finalY + bubbleHeight > window.innerHeight) finalY = window.innerHeight - bubbleHeight - 20;
+    
+    lookupperBubble.style.left = `${finalX}px`;
+    lookupperBubble.style.top = `${finalY}px`;
+    lookupperBubble.style.transform = 'none';
+}
+
+async function showLookupperBubble(text, x, y) {
+    if (!lookupperBubble) return;
+    
+    // Position bubble
+    positionBubble(x, y);
+    if (bubbleLoader) bubbleLoader.style.display = 'flex';
+    
+    // 1. Context Mode
+    const mode = settings.assistantMode || 'tutor'; // game, movie, tutor
+    const isSentence = text.trim().split(/\s+/).length > 2;
+    
+    // 2. LAYER 1: Immediate Fast Translation (Google)
+    const cleanedText = text.replace(/[|\]\[}{|]/g, ' ').replace(/\s+/g, ' ').trim();
+    const fastPromise = translateWithGoogle(cleanedText, settings.targetLang || 'th').then(fastTrans => {
+        window.electronAPI.send('toMain', { 
+            type: 'assistant-update', 
+            fastText: fastTrans,
+            mode: mode,
+            isFavorite: (settings.lookupperMemory && settings.lookupperMemory[text.toLowerCase().trim()]?.isFavorite) || false
+        });
+        return fastTrans;
+    });
+
+    // 3. LAYER 2: Smart AI Deep Analysis
+    const prompt = `You are "Aura Assistant", a professional language tutor specializing in ${mode.toUpperCase()} context.
+Analyze context: "${text}"
+DO NOT repeat the input. Return ONLY a structured breakdown in Thai:
+### 🧠 Deep Analysis (${mode})
+**ความหมายเชิงบริบท**: [อธิบายการใช้งานในบริบท ${mode} สั้นๆ]
+
+**คำศัพท์สำคัญ**:
+- Word1 (แปล): คำอธิบายสั้นๆ
+- Word2 (แปล): คำอธิบายสั้นๆ
+
+**ประโยคตัวอย่าง**: [ประโยคที่เกี่ยวข้องกับ ${mode}]
+
+---
+VOCAB_DATA: word1|translation1|definition1, word2|translation2|definition2
+`;
+
+    try {
+        console.log("Renderer: Layer 2 AI call initiated...");
+        
+        let response;
+        const localServerOk = await checkLocalAIConnection();
+        
+        if (localServerOk) {
+            // Favor Local AI (Llama 3.2 / Phi-3)
+            response = await callAI('api', prompt);
+        } else {
+            // Fallback to Gemini
+            response = await callAI('gemini', prompt);
+        }
+        
+        // Parse Vocab from the hidden tag
+        const vocabMatch = response.match(/VOCAB_DATA:\s*(.*)/);
+        let vocab = [];
+        if (vocabMatch) {
+            vocab = vocabMatch[1].split(',').map(item => {
+                const [word, translation, definition] = item.split('|').map(s => s.trim());
+                return { word, translation, definition };
+            });
+            response = response.replace(/VOCAB_DATA:.*/s, '').trim(); // Remove the data tag from UI
+        }
+        
+        // Update assistant with AI result
+        window.electronAPI.send('toMain', { 
+            type: 'assistant-update', 
+            html: response,
+            vocab: vocab
+        });
+
+        if (bubbleLoader) bubbleLoader.style.display = 'none';
+        if (bubbleInner) bubbleInner.innerHTML = `
+            <div style="font-size: 0.8em; opacity: 0.6; margin-bottom: 5px;">[ ${isSentence ? "Sentence" : "Word"} Analysis ]</div>
+            ${response}
+        `;
+        
+        // 5. Auto-Speak
+        if (settings.lookupperAutoSpeak) triggerTTS(text);
+        
+        // 6. Update Memory (History)
+        updateWordMemory(text);
+
+        // Auto-hide logic handled by assistant window or timer
+    } catch (e) {
+        console.error("AI Error:", e);
+        // If Layer 2 fails, we still have Layer 1 visible!
+        window.electronAPI.send('toMain', { 
+            type: 'assistant-update', 
+            html: `<div style="font-size: 0.8rem; opacity: 0.7;">⚠️ Smart analysis failed. (Error: ${e.message})</div>` 
+        });
+        if (bubbleLoader) bubbleLoader.style.display = 'none';
+    }
+}
+
+function updateWordMemory(text) {
+    const word = text.toLowerCase().trim();
+    if (!word || word.length < 1) return;
+    
+    if (!settings.lookupperMemory) settings.lookupperMemory = {};
+    if (!settings.lookupperMemory[word]) {
+        settings.lookupperMemory[word] = { count: 0, firstSeen: new Date().toISOString(), isFavorite: false };
+    }
+    settings.lookupperMemory[word].count++;
+    settings.lookupperMemory[word].lastSeen = new Date().toISOString();
+    saveSettings();
+}
+
+async function callAI(provider, promptText) {
+    // [EN] Smart Switch Logic
+    // [TH] ระบบสลับ AI อัตโนมัติ: ลองเครื่องก่อน ถ้าไม่ได้ค่อยไป Cloud
+    const localEndpoint = (settings.localAIEndpoint || "http://127.0.0.1:11434").trim();
+    
+    // 1. Try Local AI first
+    try {
+        console.log("[Aura Smart] Attempting Local AI...");
+        const result = await fetchLocalAIResponse(localEndpoint, promptText);
+        if (result) return result;
+    } catch (err) {
+        console.warn("[Aura Smart] Local AI failed, trying Cloud fallback...", err);
+    }
+
+    // 2. Fallback to OpenRouter if Key exists
+    if (settings.openRouterKey) {
+        try {
+            console.log("[Aura Smart] Attempting OpenRouter Fallback...");
+            const result = await fetchOpenRouterDirect(promptText);
+            return result;
+        } catch (err) {
+            console.error("[Aura Smart] Cloud fallback also failed.", err);
+        }
+    }
+
+    throw new Error("Could not connect to any AI. Please check if Ollama is running or add an OpenRouter Key.");
+}
+
+async function fetchLocalAIResponse(endpoint, promptText) {
+    const modelSelector = document.getElementById('api-model-selector');
+    const selectedModel = modelSelector ? modelSelector.value : 'llama3.2';
+
+    let apiUrl = endpoint;
+    if (!apiUrl.startsWith('http')) apiUrl = `http://${apiUrl}`;
+    if (!apiUrl.match(/\/v1\/chat\/completions\/?$/)) {
+        apiUrl = `${apiUrl.replace(/\/$/, '')}/v1/chat/completions`;
+    }
+
+    const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model: selectedModel,
+            messages: [{ role: "user", content: promptText }],
+            stream: false
+        })
+    });
+
+    if (!response.ok) throw new Error(`Local Status ${response.status}`);
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content;
+}
+
+async function fetchOpenRouterDirect(promptText) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${settings.openRouterKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "google/gemini-2.0-flash-lite-preview-001:free", // Default reliable free model
+            messages: [{ role: "user", content: promptText }]
+        })
+    });
+    if (!response.ok) throw new Error(`Cloud Status ${response.status}`);
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content;
+}
+
+async function translateWithGoogle(text, targetLang = 'th') {
+    try {
+        // Unofficial Google Translate API endpoint (Free)
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Google Translate Error");
+        const data = await response.json();
+        return data[0].map(x => x[0]).join('');
+    } catch (e) {
+        console.error("Google Translate error:", e);
+        throw new Error("Free translation failed. Check internet or add OpenRouter Key.");
+    }
+}
+
+function hideLookupperBubble() {
+    lookupperBubble?.classList.add('hidden');
+}
+
+document.getElementById('btn-close-bubble')?.addEventListener('click', hideLookupperBubble);
+
+document.getElementById('btn-trigger-lookupper')?.addEventListener('click', () => {
+    window.electronAPI.send('toMain', { type: 'lookupper-capture' });
+    showToast("🔍 Aura is checking your screen...");
+});
+
+// Draggable Bubble Logic
+let isDragging = false;
+let currentX;
+let currentY;
+let initialX;
+let initialY;
+let xOffset = 0;
+let yOffset = 0;
+
+const bubbleHeader = lookupperBubble?.querySelector('.bubble-header');
+bubbleHeader?.addEventListener('mousedown', dragStart);
+document.addEventListener('mousemove', drag);
+document.addEventListener('mouseup', dragEnd);
+
+function dragStart(e) {
+    if (e.target === bubbleHeader || bubbleHeader?.contains(e.target)) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        isDragging = true;
+    }
+}
+
+function drag(e) {
+    if (isDragging) {
+        e.preventDefault();
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        xOffset = currentX;
+        yOffset = currentY;
+        setTranslate(currentX, currentY, lookupperBubble);
+    }
+}
+
+function setTranslate(xPos, yPos, el) {
+    if (el) el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
+}
+
+function dragEnd(e) {
+    initialX = currentX;
+    initialY = currentY;
+    isDragging = false;
+}
+
+// Escape to close
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideLookupperBubble();
+});
+
+// Notion Integration
+async function saveToNotion(content) {
+    if (!navigator.onLine) {
+        addToNotionQueue(content);
+        showToast("🔌 Offline. Saved to queue for later.");
+        return false;
+    }
+
+    try {
+        const result = await attemptNotionSync(content);
+        if (result && result.ok) {
+            // --- Notion Undo Implementation ---
+            const undoToast = document.getElementById('notion-undo-toast');
+            const undoBtn = document.getElementById('btn-notion-undo');
+            if (undoToast && undoBtn) {
+                undoToast.classList.remove('hidden');
+                undoBtn.onclick = async () => {
+                    await deleteNotionPage(result.id);
+                    undoToast.classList.add('hidden');
+                    showToast("🗑️ Notion Entry Removed");
+                };
+                setTimeout(() => undoToast.classList.add('hidden'), 5000);
+            }
+        }
+        return result.ok;
+    } catch (e) {
+        addToNotionQueue(content);
+        showToast("📓 Notion Sync Error. Saved to queue.");
+        return false;
+    }
+}
+
+async function attemptNotionSync(content, retryCount = 0) {
+    const url = 'https://api.notion.com/v1/pages';
+    const body = {
+        parent: { database_id: settings.notionDatabaseId },
+        properties: {
+            Name: { title: [{ text: { content: "Aura Lookup: " + new Date().toLocaleDateString() } }] }
+        },
+        children: [{
+            object: 'block',
+            type: 'paragraph',
+            paragraph: { rich_text: [{ type: 'text', text: { content: content } }] }
+        }]
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${settings.notionApiKey}`,
+                'Content-Type': 'application/json',
+                'Notion-Version': '2022-06-28'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return { ok: true, id: data.id };
+        }
+
+        if (retryCount < 3) {
+            const delay = Math.pow(2, retryCount) * 1000;
+            console.log(`Notion Retry ${retryCount + 1} after ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            return await attemptNotionSync(content, retryCount + 1);
+        }
+        return { ok: false };
+    } catch (e) {
+        if (retryCount < 3) {
+            const delay = Math.pow(2, retryCount) * 1000;
+            await new Promise(r => setTimeout(r, delay));
+            return await attemptNotionSync(content, retryCount + 1);
+        }
+        throw e;
+    }
+}
+
+function addToNotionQueue(content) {
+    let queue = JSON.parse(localStorage.getItem('notion_queue') || '[]');
+    queue.push({ content, timestamp: new Date().toISOString() });
+    localStorage.setItem('notion_queue', JSON.stringify(queue));
+}
+
+window.addEventListener('online', async () => {
+    let queue = JSON.parse(localStorage.getItem('notion_queue') || '[]');
+    if (queue.length === 0) return;
+
+    showToast(`🔄 Syncing ${queue.length} items to Notion...`);
+    let remaining = [];
+    for (const item of queue) {
+        const success = await attemptNotionSync(item.content);
+        if (!success) remaining.push(item);
+    }
+    localStorage.setItem('notion_queue', JSON.stringify(remaining));
+    if (remaining.length === 0) showToast("📓 Notion Sync Complete!");
+});
+
+function triggerTTS(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    utterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+    window.speechSynthesis.speak(utterance);
+}
+
+document.getElementById('btn-bubble-notion')?.addEventListener('click', async () => {
+    const content = bubbleInner?.innerText;
+    if (!content) return;
+
+    if (!settings.notionApiKey || !settings.notionDatabaseId) {
+        showToast("⚠️ Please configure Notion settings first!");
+        return;
+    }
+
+    const btn = document.getElementById('btn-bubble-notion');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳';
+    
+    const success = await saveToNotion(content);
+    if (success) {
+        showToast("✅ Saved to Notion!");
+        btn.innerHTML = '✅';
+    } else {
+        btn.innerHTML = originalText;
+    }
+});
+
+// --- [EN] Critical Window UI Controls (Must be first for reliability) ---
+// [TH] ตัวควบคุมหน้าต่างที่สำคัญ (ต้องอยู่ลำดับแรกเพื่อความน่าเชื่อถือ)
 const btnMinWin = document.getElementById('btn-min-win');
 const btnMaxWin = document.getElementById('btn-max-win');
 const btnCloseWin = document.getElementById('btn-close-win');
@@ -58,6 +776,58 @@ const btnCloseWin = document.getElementById('btn-close-win');
 if (btnMinWin) btnMinWin.onclick = () => window.electronAPI.send('toMain', { type: 'window-control', action: 'minimize' });
 if (btnMaxWin) btnMaxWin.onclick = () => window.electronAPI.send('toMain', { type: 'window-control', action: 'maximize' });
 if (btnCloseWin) btnCloseWin.onclick = () => window.electronAPI.send('toMain', { type: 'window-control', action: 'close' });
+
+// Minimal Mode Toggle
+const btnMiniMode = document.getElementById('btn-mini-mode');
+const btnMinimalSidebar = document.getElementById('btn-minimal-toggle');
+const toggleMinimal = () => {
+    document.body.classList.toggle('minimal-ui');
+    const isMinimal = document.body.classList.contains('minimal-ui');
+    if (btnMiniMode) btnMiniMode.innerHTML = isMinimal ? '🔙 Full UI' : '🏙️ Small UI';
+    showToast(isMinimal ? "🏙️ Focus Mode: Sidebar Hidden" : "🏠 Standard Mode: Sidebar Visible");
+};
+if (btnMiniMode) btnMiniMode.onclick = toggleMinimal;
+if (btnMinimalSidebar) btnMinimalSidebar.onclick = toggleMinimal;
+
+// Sidebar Collapsible Logic
+const toggleAddons = document.getElementById('toggle-addons');
+const addonsContent = document.getElementById('addons-collapsible');
+if (toggleAddons && addonsContent) {
+    toggleAddons.onclick = () => {
+        toggleAddons.classList.toggle('collapsed');
+        // Animation is handled by CSS (max-height)
+    };
+}
+
+// Smart Hub Target Badge Logic
+function updateInputTargetBadge() {
+    const badge = document.getElementById('input-target-badge');
+    if (!badge) return;
+    
+    const activePanels = document.querySelectorAll('.view-panel:not(.hidden)');
+    if (activePanels.length === 0) {
+        badge.innerHTML = "→ NONE ⚪";
+        badge.classList.add('hidden');
+        document.getElementById('hub-input').placeholder = "Open a workspace to begin...";
+    } else if (activePanels.length === 1) {
+        const name = activePanels[0].querySelector('.view-title').textContent;
+        badge.innerHTML = `→ ${name} 🟢`;
+        badge.classList.remove('hidden');
+        document.getElementById('hub-input').placeholder = `Ask ${name}... (Ctrl+H)`;
+    } else {
+        badge.innerHTML = `→ ALL (${activePanels.length}) 🔵`;
+        badge.classList.remove('hidden');
+        document.getElementById('hub-input').placeholder = `Broadcast to ${activePanels.length} AIs... (Ctrl+Shift+H)`;
+    }
+}
+// Call whenever panels change
+const observer = new MutationObserver(updateInputTargetBadge);
+observer.observe(document.getElementById('webview-container'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+
+// Global registries
+let currentUser = null;
+window.USER_DOC_REF = null;
+let lastPrompt = '';
 
 const authOverlay = document.getElementById('auth-overlay');
 const authForm = document.getElementById('auth-form');
@@ -77,13 +847,179 @@ const emailLabel = document.getElementById('email-label');
 const hubInput = document.getElementById('hub-input');
 const quickChips = document.getElementById('quick-chips');
 const btnSendRaw = document.getElementById('btn-send-raw');
+const btnBroadcast = document.getElementById('btn-broadcast');
 const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+const hubAISelector = document.getElementById('hub-ai-selector');
+const globalSubject = document.getElementById('global-subject');
 
 // Mode Button Constants (Legacy/Hardcoded)
 const btnGeneral = document.getElementById('btn-general');
 const btnEcommerce = document.getElementById('btn-ecommerce');
 const btnJapanese = document.getElementById('btn-japanese');
 const btnGraphicDesign = document.getElementById('btn-graphic-design');
+
+// --- Global UI Registry ---
+const panels = {
+    gemini: document.getElementById('panel-gemini'),
+    chatgpt: document.getElementById('panel-chatgpt'),
+    claude: document.getElementById('panel-claude'),
+    deepseek: document.getElementById('panel-deepseek'),
+    leonardo: document.getElementById('panel-leonardo'),
+    bing: document.getElementById('panel-bing'),
+    perplexity: document.getElementById('panel-perplexity'),
+    grok: document.getElementById('panel-grok'),
+    duck: document.getElementById('panel-duck'),
+    api: document.getElementById('panel-api'),
+    custom: document.getElementById('panel-custom'),
+    dashboard: document.getElementById('panel-dashboard')
+};
+
+const webviews = {
+    gemini: document.getElementById('wv-gemini'),
+    chatgpt: document.getElementById('wv-chatgpt'),
+    claude: document.getElementById('wv-claude'),
+    deepseek: document.getElementById('wv-deepseek'),
+    leonardo: document.getElementById('wv-leonardo'),
+    bing: document.getElementById('wv-bing'),
+    perplexity: document.getElementById('wv-perplexity'),
+    grok: document.getElementById('wv-grok'),
+    duck: document.getElementById('wv-duck'),
+    custom: document.getElementById('wv-custom')
+};
+
+const promptList = document.getElementById('prompt-list');
+// [REMOVED DUPLICATE]
+const settingsOverlay = document.getElementById('settings-overlay');
+const quickSwitcherOverlay = document.getElementById('quick-switcher-overlay');
+const quickSwitcherInput = document.getElementById('quick-switcher-input');
+const quickSwitcherResults = document.getElementById('quick-switcher-results');
+
+const btnOpenStore = document.getElementById('btn-open-store');
+const btnCloseStore = document.getElementById('btn-close-store');
+const btnDoneStore = document.getElementById('btn-done-store');
+
+function updateAddonSlotUI() {
+    if (!storeOverlay) return;
+    const buttons = storeOverlay.querySelectorAll('.btn-addon-toggle');
+    buttons.forEach(btn => {
+        const id = btn.getAttribute('data-addon');
+        const active = isAddonActive(id);
+        const installed = settings.addons && settings.addons[id] && settings.addons[id].installed;
+
+        if (active) {
+            btn.innerText = "✓ Enabled";
+            btn.style.background = "rgba(16, 185, 129, 0.15)";
+            btn.style.color = "#10b981";
+            btn.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+        } else if (installed) {
+            btn.innerText = "🔌 Enable Now";
+            btn.style.background = "var(--accent)";
+            btn.style.color = "white";
+            btn.style.border = "none";
+        } else {
+            btn.innerText = "📥 Install";
+            btn.style.background = "var(--accent)";
+            btn.style.color = "white";
+            btn.style.border = "none";
+        }
+    });
+}
+
+// [MOVED TO PLATFORM CORE]
+
+function refreshModularUI() {
+    if (!settings.addons) return;
+    
+    // 1. Gating AI Hub (Dynamic Toggles & Layout)
+    const togglesContainer = document.getElementById('dynamic-toggles');
+    const layoutControl = document.querySelector('.layout-controls');
+    const hasHub = isAddonActive('aiHub');
+    
+    if (togglesContainer) togglesContainer.style.display = hasHub ? 'flex' : 'none';
+    if (layoutControl) layoutControl.style.display = hasHub ? 'flex' : 'none';
+    if (hasHub && typeof renderToggles === 'function') renderToggles();
+
+    // 2. Gating Translate Overlay (Sidebar Button)
+    const trans = settings.addons.translateOverlay;
+    const btnTrans = document.getElementById('btn-trigger-lookupper');
+    const btnOld = document.getElementById('btn-open-lookupper');
+    const hasTrans = isAddonActive('translateOverlay');
+
+    if (btnTrans) {
+        if (hasTrans) btnTrans.classList.remove('hidden');
+        else btnTrans.classList.add('hidden');
+    }
+    if (btnOld) btnOld.style.display = hasTrans ? 'flex' : 'none';
+
+    // 3. Local AI Gating
+    const local = settings.addons.localAI;
+    const apiOption = document.querySelector('#hub-ai-selector option[value="api"]');
+    const proUtils = document.getElementById('pro-utilities');
+    const hasLocal = isAddonActive('localAI');
+    
+    if (apiOption) apiOption.style.display = hasLocal ? 'block' : 'none';
+    if (proUtils) proUtils.style.display = hasLocal ? 'flex' : 'none';
+    
+    if (!hasLocal && settings.provider === 'api') {
+        settings.provider = 'gemini';
+    }
+}
+
+function openStore() {
+    if (storeOverlay) {
+        updateAddonSlotUI();
+        storeOverlay.classList.remove('hidden');
+    }
+}
+
+if (btnOpenStore) btnOpenStore.onclick = openStore;
+if (btnCloseStore) btnCloseStore.onclick = () => storeOverlay.classList.add('hidden');
+if (btnDoneStore) btnDoneStore.onclick = () => storeOverlay.classList.add('hidden');
+
+// Global Delegate for Add-on Toggles
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-addon-toggle')) {
+        const btn = e.target;
+        const id = btn.getAttribute('data-addon');
+        const addon = settings.addons[id] || { installed: false, enabled: false };
+
+        if (!addon.installed) {
+            // "Installing" Visual State
+            btn.innerText = "⏳ Installing...";
+            btn.style.opacity = "0.7";
+            btn.style.pointerEvents = "none";
+
+            setTimeout(() => {
+                if (id === 'localAI') {
+                    showLocalAISetupModal();
+                    storeOverlay.classList.add('hidden');
+                } else {
+                    updateAddonState(id, { installed: true, enabled: true });
+                    showToast(`✨ Aura AI: ${id} Ready!`);
+                    
+                    // On-Action Highlight: Pulse relevant labels
+                    if (id === 'translateOverlay') {
+                        showToast("💡 Pro Tip: Press Alt+Q anywhere to translate.");
+                    }
+                    
+                    updateAddonSlotUI();
+                }
+                btn.style.opacity = "1";
+                btn.style.pointerEvents = "auto";
+            }, 800); // Fast feeling installation
+        } else {
+            // "Toggle" Logic
+            updateAddonState(id, { enabled: !addon.enabled });
+            showToast(`🔌 ${id} ${!addon.enabled ? 'Enabled' : 'Disabled'}`);
+            if (!addon.enabled && id === 'translateOverlay') {
+                showToast("🎯 Press Alt+Q to start translating.");
+            }
+            updateAddonSlotUI();
+        }
+        
+        if (typeof renderSidebar === 'function') renderSidebar(); 
+    }
+});
 
 let isSignUpMode = false;
 
@@ -159,7 +1095,21 @@ if (authForm) {
         
         if (authError) authError.classList.add('hidden');
 
+        if (!email) {
+            showError("Please enter your email or username.");
+            return;
+        }
+        if (!password) {
+            showError("Please enter your password.");
+            return;
+        }
+
         try {
+            if (authSubmitBtn) {
+                authSubmitBtn.disabled = true;
+                authSubmitBtn.innerText = "⏳ Processing...";
+            }
+            
             if (isSignUpMode) {
                 // If username provided, check uniqueness
                 if (username) {
@@ -191,6 +1141,11 @@ if (authForm) {
             }
         } catch (error) {
             showError(error.message.replace('Firebase: ', ''));
+        } finally {
+            if (authSubmitBtn) {
+                authSubmitBtn.disabled = false;
+                authSubmitBtn.innerText = isSignUpMode ? "Create Account" : "Sign In";
+            }
         }
     };
 }
@@ -250,6 +1205,11 @@ window.electronAPI.receive('fromMain', async (data) => {
     } else if (data.type === 'auth-success') {
         // From Local Loopback Server
         completeGoogleSignIn(data.idToken);
+    } else if (data.type === 'capture-success') {
+        // Success notification for screenshots
+        const isMac = window.electronAPI && window.electronAPI.isMac;
+        const pasteKey = isMac ? '⌘+V' : 'Ctrl+V';
+        showToast(`✅ Capture Success!\n[TH] ก๊อปรูปลง Clipboard แล้วครับ กด ${pasteKey} ที่แชทได้เลย!`);
     }
 });
 
@@ -285,6 +1245,28 @@ if (btnLogout) {
     };
 }
 
+// Sidebar Settings
+const btnSettings = document.getElementById('btn-settings');
+if (btnSettings) {
+    btnSettings.onclick = () => {
+        if (settingsOverlay) {
+            applySettingsToUI();
+            settingsOverlay.classList.remove('hidden');
+        }
+    };
+}
+
+// Sidebar Theme Toggle
+const btnThemeToggleInFooter = document.getElementById('btn-theme-toggle');
+if (btnThemeToggleInFooter) {
+    btnThemeToggleInFooter.onclick = () => {
+        settings.theme = (settings.theme === 'light') ? 'dark' : 'light';
+        localStorage.setItem('aura_settings', JSON.stringify(settings));
+        applySettingsToUI();
+        showToast(`✨ Theme switched to ${settings.theme} mode`);
+    };
+}
+
 // Listen for Auth State Changes
 onAuthStateChanged(auth, async (user) => {
     const verifySection = document.getElementById('verify-email-section');
@@ -310,6 +1292,11 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         window.USER_DOC_REF = doc(db, "users", user.uid);
         if (authOverlay) authOverlay.classList.add('hidden');
+        
+        // --- Webview Isolation Restore ---
+        const wvContainer = document.getElementById('webview-container');
+        if (wvContainer) wvContainer.classList.remove('hidden');
+
         showToast(`👋 Welcome back, ${user.email || 'Pro User'}!`);
 
         // Initialize App Setup only after login
@@ -333,22 +1320,18 @@ onAuthStateChanged(auth, async (user) => {
         if (authForm) authForm.classList.remove('hidden');
         if (verifySection) verifySection.classList.add('hidden');
         if (authTitle) authTitle.innerText = "Welcome to Aura AI";
+
+        // --- Webview Isolation (Emergency Fix for Mouse Interference) ---
+        const wvContainer = document.getElementById('webview-container');
+        if (wvContainer) wvContainer.classList.add('hidden');
+
+        // Force focus to start typing immediately
+        setTimeout(() => {
+            const emailInp = document.getElementById('auth-email');
+            if (emailInp) emailInp.focus();
+        }, 100);
     }
 });
-
-const promptList = document.getElementById('prompt-list');
-
-// Add-on Store References
-const storeOverlay = document.getElementById('store-overlay');
-const btnOpenStore = document.getElementById('btn-open-store');
-const btnCloseStore = document.getElementById('btn-close-store');
-const btnDoneStore = document.getElementById('btn-done-store');
-const storeItems = document.querySelectorAll('.store-btn-install');
-const createAddonOverlay = document.getElementById('create-addon-overlay');
-const btnOpenCreateAddon = document.getElementById('btn-open-create-addon');
-const btnCloseCreateAddon = document.getElementById('btn-close-create-addon');
-const btnPublishAddon = document.getElementById('btn-publish-addon');
-const communityAddonList = document.getElementById('community-addon-list');
 
 // Toast Notification System (L้ำๆ)
 function showToast(message) {
@@ -374,47 +1357,30 @@ function showToast(message) {
     }, 3500);
 }
 
-const webviews = {
-    gemini: document.getElementById('wv-gemini'),
-    chatgpt: document.getElementById('wv-chatgpt'),
-    claude: document.getElementById('wv-claude'),
-    deepseek: document.getElementById('wv-deepseek'),
-    leonardo: document.getElementById('wv-leonardo'),
-    custom: document.getElementById('wv-custom')
-};
-
-const panels = {
-    gemini: document.getElementById('panel-gemini'),
-    chatgpt: document.getElementById('panel-chatgpt'),
-    claude: document.getElementById('panel-claude'),
-    deepseek: document.getElementById('panel-deepseek'),
-    leonardo: document.getElementById('panel-leonardo'),
-    api: document.getElementById('panel-api'),
-    custom: document.getElementById('panel-custom'),
-    dashboard: document.getElementById('panel-dashboard')
-};
-
 // --- Add event listeners for webview loading states (Status Indicator) ---
-Object.keys(webviews).forEach(provider => {
-    const wv = webviews[provider];
-    const panel = panels[provider];
-    if (wv && panel) {
-        const dot = panel.querySelector('.status-dot');
-        if (dot) {
-            wv.addEventListener('did-start-loading', () => {
-                dot.classList.add('loading');
-                dot.classList.remove('error');
-            });
-            wv.addEventListener('did-stop-loading', () => {
-                dot.classList.remove('loading');
-            });
-            wv.addEventListener('did-fail-load', () => {
-                dot.classList.remove('loading');
-                dot.classList.add('error');
-            });
+// --- Add event listeners for webview loading states (Status Indicator) ---
+if (webviews && panels) {
+    Object.keys(webviews).forEach(provider => {
+        const wv = webviews[provider];
+        const panel = panels[provider];
+        if (wv && panel) {
+            const dot = panel.querySelector('.status-dot');
+            if (dot) {
+                wv.addEventListener('did-start-loading', () => {
+                    dot.classList.add('loading');
+                    dot.classList.remove('error');
+                });
+                wv.addEventListener('did-stop-loading', () => {
+                    dot.classList.remove('loading');
+                });
+                wv.addEventListener('did-fail-load', () => {
+                    dot.classList.remove('loading');
+                    dot.classList.add('error');
+                });
+            }
         }
-    }
-});
+    });
+}
 
 // Panel Toggle Logic
 function toggleView(provider, show) {
@@ -428,6 +1394,13 @@ function toggleView(provider, show) {
         // Custom tab button highlight
         const tabBtn = document.getElementById(`btn-tab-${provider}`);
         if (tabBtn) tabBtn.classList.add('active');
+
+        // Lazy load webview src to prevent Chromium crash on startup
+        const wv = panel.querySelector('webview');
+        if (wv && !wv.src && wv.getAttribute('data-src')) {
+            wv.src = wv.getAttribute('data-src');
+            console.log(`[Aura AI] Lazy loaded webview for: ${provider}`);
+        }
 
         // Design Toolbar for Graphic Design Mode (Limited to Inspiration & Custom Workspace only)
         const isDesignTool = provider === 'custom' || provider.startsWith('custom-');
@@ -484,6 +1457,8 @@ function applyLayoutStyle(style) {
     if (layoutSelect) layoutSelect.value = style;
 }
 
+// [REMOVED DUPLICATE DECLARATION]
+
 // Remove hardcoded top toggles logic and replace with dynamic function
 function renderToggles() {
     const container = document.getElementById('dynamic-toggles');
@@ -492,7 +1467,9 @@ function renderToggles() {
 
     const names = {
         gemini: 'Gemini', chatgpt: 'ChatGPT', claude: 'Claude',
-        deepseek: 'DeepSeek', leonardo: 'Leonardo AI', api: '🌟 Aura Pro', 
+        deepseek: 'DeepSeek', leonardo: 'Leonardo AI', 
+        bing: 'Bing', perplexity: 'Perplexity', grok: 'Grok', duck: 'DuckAI',
+        api: '🌟 Aura Pro', 
         custom: (settings.currentMode === 'graphic-design') ? '🎨 Inspiration' : (settings.customAIName || 'Custom AI')
     };
 
@@ -509,8 +1486,12 @@ function renderToggles() {
         if (provider === 'claude' && settings.showClaude === false) return;
         if (provider === 'deepseek' && settings.showDeepSeek === false) return;
         if (provider === 'leonardo' && settings.showLeonardo === false) return;
+        if (provider === 'bing' && settings.showBing === false) return;
+        if (provider === 'perplexity' && settings.showPerplexity === false) return;
+        if (provider === 'grok' && settings.showGrok === false) return;
+        if (provider === 'duck' && settings.showDuck === false) return;
         if (provider === 'custom' && !settings.showCustomAI) return;
-        if (provider === 'api' && !settings.useApiMode) return; // Hide API tab if Pro Mode is off
+        if (provider === 'api' && !settings.useApiMode) return; 
 
         const btn = document.createElement('button');
         btn.className = 'ai-toggle';
@@ -628,40 +1609,6 @@ if (btnHideAll) {
     };
 }
 
-// Prompt Data / プロンプトデータ / ข้อมูลคำสั่ง
-let customPrompts = {}; // loaded from settings
-
-const defaultPrompts = {
-    general: [
-        { label: "💡 Brainstorm", text: "Give me 5 creative ideas for [YOUR TOPIC]:" },
-        { label: "📝 Summarize", text: "Please summarize the following text into 3 bullet points:\n\n[PASTE SENTENCE]" },
-        { label: "🔍 Explain Like I'm 5", text: "Explain [YOUR TOPIC] as if I am 5 years old:" },
-        { label: "✍️ Rewrite Pro", text: "Rewrite the following text to sound more professional and concise:\n\n[PASTE SENTENCE]" },
-        { label: "💻 Code Helper", text: "How do I implement [YOUR TOPIC] in JavaScript?" }
-    ],
-    ecommerce: [
-        { label: "📸 Product Desc", text: "Create a minimalist product description for [YOUR PRODUCT]:" },
-        { label: "✉️ Email Marketing", text: "Write a high-converting email about [YOUR TOPIC]:" },
-        { label: "🏷️ Ad Headlines", text: "Generate 5 catchy Facebook ad headlines for [YOUR PRODUCT]:" },
-        { label: "📦 Bundle Ideas", text: "Suggest 3 product bundle ideas for [YOUR PRODUCT] to increase AOV:" },
-        { label: "💬 Customer FAQ", text: "Write 3 professional FAQ entries for [YOUR PRODUCT] regarding shipping and returns:" }
-    ],
-    japanese: [
-        { label: "📝 Grammar Breakdown", text: "Please break down the grammar and particles of this sentence: [PASTE SENTENCE]" },
-        { label: "🔄 Natural", text: "Translate this to natural Japanese (polite/casual): [YOUR TEXT]" },
-        { label: "🈁 Kanji Analysis", text: "Explain the Kanji components and readings of: [YOUR KANJI]" },
-        { label: "🃏 Anki Card", text: "Based on this sentence, create a format for an Anki card (Expression, Meaning, Reading, Sample Sentence):" },
-        { label: "🎭 Polite vs Casual", text: "How would you say this sentence differently in Keigo (Polite) vs Casual form: [YOUR TEXT]" }
-    ],
-    "graphic-design": [
-        { label: "🎨 Image Prompt", text: "Create a highly detailed image generation prompt for Leonardo AI based on this idea: [YOUR IDEA]. Include lighting, style, and camera angles." },
-        { label: "🖌️ Color Palette", text: "Suggest 3 unique color palettes (with hex codes) for a project about [YOUR TOPIC]. Explain the mood of each." },
-        { label: "📝 Typography Pairs", text: "Recommend 2 font pairings (Google Fonts) suitable for a [YOUR TOPIC] design, and explain why they work together." },
-        { label: "🖼️ Layout Idea", text: "Describe a wireframe or layout structure for a [YOUR TOPIC] design. Where should the focal point be?" },
-        { label: "💡 Concept Brainstorm", text: "Give me 5 unconventional visual metaphors for the concept of [YOUR TOPIC]." }
-    ]
-};
-
 function getActivePrompts(mode) {
     if (settings.customPrompts && settings.customPrompts[mode]) {
         return settings.customPrompts[mode];
@@ -743,23 +1690,90 @@ function renderChips(mode) {
     });
 }
 
-btnSendRaw.onclick = () => {
-    const val = hubInput.value;
-    if (val.trim()) {
-        injectToAI(val);
-        hubInput.value = ''; // Auto clear after sending
-    }
-};
+if (btnSendRaw) {
+    btnSendRaw.onclick = () => {
+        const val = hubInput.value;
+        if (val.trim()) {
+            injectToAI(val);
+            hubInput.value = ''; // Auto clear after sending
+        }
+    };
+}
 
 // Allow pressing Enter to send
-hubInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        injectToAI(hubInput.value);
+if (hubInput) {
+    hubInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            injectToAI(hubInput.value);
+        }
+    });
+
+    // Ctrl+H (Send), Ctrl+Shift+H (Broadcast)
+    hubInput.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'h') {
+            e.preventDefault();
+            if (e.shiftKey) btnBroadcast.click();
+            else btnSendRaw.click();
+        }
+    });
+}
+
+if (hubAISelector) {
+    hubAISelector.onchange = (e) => {
+        const provider = e.target.value;
+        if (provider === 'all') {
+            const defaultPanels = settings.layouts[settings.currentMode] || ['gemini', 'chatgpt'];
+            defaultPanels.forEach(p => toggleView(p, true));
+        } else {
+            // Show only the selected one
+            Object.keys(panels).forEach(p => {
+                if (p !== 'dashboard' && panels[p]) {
+                    toggleView(p, p === provider);
+                }
+            });
+        }
+        saveLayoutState();
+    };
+}
+
+if (btnBroadcast) {
+    btnBroadcast.onclick = () => {
+        const val = hubInput.value.trim();
+        if (val) {
+            const activePanels = document.querySelectorAll('.view-panel:not(.hidden)');
+            if (activePanels.length === 0) {
+                showToast("⚠️ No active panels to broadcast to!");
+                return;
+            }
+            activePanels.forEach(p => {
+                const id = p.getAttribute('data-id');
+                injectToSpecificAI(id, val);
+            });
+            showToast(`📢 Broadcast sent to ${activePanels.length} AIs!`);
+            hubInput.value = '';
+        }
+    };
+}
+
+function triggerPromptShortcut(index) {
+    const activePrompts = getActivePrompts(settings.currentMode);
+    const p = activePrompts[index];
+    if (p) {
+        const userInput = hubInput.value.trim();
+        if (userInput) {
+            const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
+                .replace('[YOUR TOPIC]', userInput)
+                .replace('[PASTE SENTENCE]', userInput)
+                .replace('[YOUR TEXT]', userInput)
+                .replace('[YOUR KANJI]', userInput);
+            injectToAI(fullPrompt);
+        } else {
+            navigator.clipboard.writeText(p.text);
+            showToast(`✅ Copied Template:\n"${p.text}"`);
+        }
     }
-});
-
-
+}
 
 function renderPrompts(mode) {
     promptList.innerHTML = '';
@@ -880,26 +1894,11 @@ function switchMode(mode) {
         settings.provider = (layout && layout.length > 0) ? layout[0] : 'gemini';
     }
 
-    updateHubSelectorLabels(mode);
-    const hubSelector = document.getElementById('hub-ai-selector');
-    if (hubSelector) hubSelector.value = settings.provider || 'gemini';
+    updateCreativeModeUI(mode); // Toggle professional suite look
+    
     localStorage.setItem('aura_settings', JSON.stringify(settings));
 }
 
-function updateHubSelectorLabels(mode) {
-    const hubSelector = document.getElementById('hub-ai-selector');
-    if (!hubSelector) return;
-    
-    const customOption = hubSelector.querySelector('option[value="custom"]');
-    if (customOption) {
-        const label = (mode === 'graphic-design') ? '🎨 Inspiration' : 'Custom AI';
-        customOption.innerText = label;
-        
-        // Also update the toggle chip if it exists
-        const toggleBtn = document.querySelector(`.ai-toggle[data-provider="custom"]`);
-        if (toggleBtn) toggleBtn.innerText = label;
-    }
-}
 
 // Graphic Design Toolbar Logic
 document.querySelectorAll('.gd-tool-btn').forEach(btn => {
@@ -956,112 +1955,11 @@ if (btnScreenshot) {
     });
 }
 
-// IPC Listeners for Shortcuts from Main Process
-// メインプロセスからのショートカット (Shortcut kara main process)
-window.electronAPI.receive('fromMain', (arg) => {
-    if (arg.type === 'shortcut-triggered') {
-        if (arg.action === 'send-prompt') {
-            injectToAI(hubInput.value);
-        } else if (arg.action === 'toggle-sidebar') {
-            const sidebar = document.querySelector('.sidebar');
-            if (sidebar) sidebar.classList.toggle('collapsed');
-            console.log("Sidebar Toggled via Main Process");
-        } else if (arg.action === 'broadcast-prompt') {
-            broadcastPrompt(hubInput.value);
-        } else if (arg.action && arg.action.startsWith('prompt-')) {
-            const index = parseInt(arg.action.split('-')[1]) - 1;
-            const activePrompts = getActivePrompts(settings.currentMode);
-            const p = activePrompts[index];
-            if (p) {
-                const userInput = hubInput.value.trim();
-                if (userInput) {
-                    const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
-                        .replace('[YOUR TOPIC]', userInput)
-                        .replace('[PASTE SENTENCE]', userInput)
-                        .replace('[YOUR TEXT]', userInput)
-                        .replace('[YOUR KANJI]', userInput);
-                    injectToAI(fullPrompt);
-                } else {
-                    navigator.clipboard.writeText(p.text);
-                    showToast(`✅ Copied Template:\n"${p.text}"`);
-                }
-            }
-        }
-    } else if (arg.type === 'screenshot-captured') {
-        btnScreenshot.innerText = "📸 Screenshot";
-        const isMac = window.electronAPI && window.electronAPI.isMac;
-        const pasteKey = isMac ? '⌘+V' : 'Ctrl+V';
-        showToast(`✅ Capture Success!\n[TH] ก๊อปรูปลง Clipboard แล้วครับ กด ${pasteKey} ที่แชทได้เลย!`);
-    }
-});
+// IPC Listeners for Shortcuts from Main Process handled above
 
 
 // Settings & Persistence Logic
 // 設定の管理 (Settei no kanri) - การจัดการการตั้งค่า
-let settings = {
-    provider: 'gemini',
-    usePrefix: false,
-    prefix: 'I am studying {}. ',
-    useSuffix: true,
-    suffix: ' Please explain in Thai.',
-    autoSend: false,
-    autoRead: false,
-    shortcuts: (window.electronAPI && window.electronAPI.isMac) ? {
-        enabled: true,
-        send: { enabled: true, key: 'Cmd+H' },
-        broadcast: { enabled: true, key: 'Cmd+Shift+H' },
-        sidebar: { enabled: true, key: 'Cmd+G' },
-        global: { enabled: true, key: 'Cmd+F' }, // Suggested by user for Mac
-        p1: { enabled: true, key: 'Alt+1' },
-        p2: { enabled: true, key: 'Alt+2' },
-        p3: { enabled: true, key: 'Alt+3' },
-        p4: { enabled: true, key: 'Alt+4' },
-        p5: { enabled: true, key: 'Alt+5' }
-    } : {
-        enabled: true,
-        send: { enabled: true, key: 'Ctrl+H' },
-        broadcast: { enabled: true, key: 'Ctrl+Shift+H' },
-        sidebar: { enabled: true, key: 'Ctrl+G' },
-        global: { enabled: true, key: 'Alt+Space' },
-        p1: { enabled: true, key: 'Alt+1' },
-        p2: { enabled: true, key: 'Alt+2' },
-        p3: { enabled: true, key: 'Alt+3' },
-        p4: { enabled: true, key: 'Alt+4' },
-        p5: { enabled: true, key: 'Alt+5' }
-    },
-    theme: 'dark',
-    showEcommerce: false,
-    showJapanese: false,
-    showGraphicDesign: false,
-    customTabs: [],
-    layouts: {
-        general: ['gemini', 'chatgpt'],
-        ecommerce: ['gemini', 'leonardo'],
-        japanese: ['gemini', 'claude']
-    },
-    panelOrder: ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'custom'],
-    currentMode: 'general',
-    customAIUrl: '',
-    customAIName: 'Custom AI',
-    showCustomAI: false,
-    showGemini: true,
-    showChatGPT: true,
-    showClaude: true,
-    showDeepSeek: true,
-    showLeonardo: true,
-    username: '',
-    communityAlias: '',
-    communityModes: [],
-    customPrompts: null, // null means use defaultPrompts
-    useApiMode: false,
-    openRouterKey: '',
-    customAIQuickLinks: [
-        { name: 'Pinterest', url: 'https://pinterest.com', icon: '📌' },
-        { name: 'Canva', url: 'https://canva.com', icon: '🎨' },
-        { name: 'Adobe Firefly', url: 'https://firefly.adobe.com', icon: '🔥' },
-        { name: 'PromptHero', url: 'https://prompthero.com', icon: '🦸' }
-    ]
-};
 
 function applySettingsToUI() {
     // Check Theme
@@ -1120,8 +2018,6 @@ function applySettingsToUI() {
     if (chkSuffix) chkSuffix.checked = settings.useSuffix;
     const txtSuffix = document.getElementById('set-suffix-val');
     if (txtSuffix) txtSuffix.value = settings.suffix;
-    if (document.getElementById('set-show-ecommerce')) document.getElementById('set-show-ecommerce').checked = settings.showEcommerce !== false;
-    if (document.getElementById('set-show-japanese')) document.getElementById('set-show-japanese').checked = settings.showJapanese !== false;
     const chkRead = document.getElementById('set-auto-read');
     if (chkRead) chkRead.checked = settings.autoRead;
 
@@ -1149,6 +2045,30 @@ function applySettingsToUI() {
         syncItem('p5', 'p5');
     }
 
+    // Local AI & Scan Mode Sync
+    const chkScan = document.getElementById('set-scan-mode');
+    if (chkScan) chkScan.checked = settings.scanMode || false;
+    
+    const chkLocal = document.getElementById('set-use-api-mode');
+    if (chkLocal) chkLocal.checked = settings.useApiMode || false;
+
+    // AI Visibility (Always Tab)
+    const providers = ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'bing', 'perplexity', 'grok', 'duck'];
+    providers.forEach(p => {
+        const chk = document.getElementById(`set-show-${p}`);
+        if (chk) chk.checked = settings[`show${p.charAt(0).toUpperCase() + p.slice(1)}`] !== false;
+    });
+
+    // Custom Prompts (Prompts Tab)
+    if (settings.customPrompts) {
+        for (let i = 1; i <= 8; i++) {
+            const lbl = document.getElementById(`p-label-${i}`);
+            const cnt = document.getElementById(`p-content-${i}`);
+            if (lbl && settings.customPrompts[i-1]) lbl.value = settings.customPrompts[i-1].name || '';
+            if (cnt && settings.customPrompts[i-1]) cnt.value = settings.customPrompts[i-1].text || '';
+        }
+    }
+
     // Custom AI Sync
     const showCustom = settings.showCustomAI === true;
     const setShowCustom = document.getElementById('set-show-custom');
@@ -1171,33 +2091,6 @@ function applySettingsToUI() {
     }
 
     renderToggles(); // Ensure Dynamic Toggles match the mode, names, and custom AI visibility!
-
-    // Sync the Top Hub Selector options based on visibility
-    const hubSelector = document.getElementById('hub-ai-selector');
-    if (hubSelector) {
-        const options = hubSelector.querySelectorAll('option');
-        options.forEach(opt => {
-            const val = opt.value;
-            if (val === 'gemini') opt.style.display = settings.showGemini !== false ? 'block' : 'none';
-            if (val === 'chatgpt') opt.style.display = settings.showChatGPT !== false ? 'block' : 'none';
-            if (val === 'claude') opt.style.display = settings.showClaude !== false ? 'block' : 'none';
-            if (val === 'deepseek') opt.style.display = settings.showDeepSeek !== false ? 'block' : 'none';
-            if (val === 'leonardo') opt.style.display = settings.showLeonardo !== false ? 'block' : 'none';
-            if (val === 'custom') opt.style.display = settings.showCustomAI ? 'block' : 'none';
-            if (val === 'api') opt.style.display = settings.useApiMode ? 'block' : 'none';
-        });
-
-        // If current provider is hidden, switch to the first visible one
-        if (hubSelector.selectedOptions[0] && hubSelector.selectedOptions[0].style.display === 'none') {
-            const firstVisible = Array.from(options).find(o => o.style.display !== 'none');
-            if (firstVisible) {
-                hubSelector.value = firstVisible.value;
-                settings.provider = firstVisible.value;
-            }
-        } else {
-            hubSelector.value = settings.provider;
-        }
-    }
 
     // Pro Mode state update
     const proUtils = document.getElementById('pro-utilities');
@@ -1231,6 +2124,37 @@ function applySettingsToUI() {
     // Main UI Auto-Send Sync
     const chkAutoMain = document.getElementById('chk-auto-send-main');
     if (chkAutoMain) chkAutoMain.checked = settings.autoSend === true;
+
+    // New Professional Settings Sync
+    if (document.getElementById('set-auto-open-sidebar')) document.getElementById('set-auto-open-sidebar').checked = settings.autoOpenSidebar !== false;
+    if (document.getElementById('set-auto-hide-sidebar')) document.getElementById('set-auto-hide-sidebar').checked = settings.autoHideSidebar === true;
+    if (document.getElementById('set-add-ai-icon-top')) document.getElementById('set-add-ai-icon-top').checked = settings.addAiIconTop !== false;
+    if (document.getElementById('set-auto-input-only')) document.getElementById('set-auto-input-only').checked = settings.autoInputOnly === true;
+
+    if (document.getElementById('set-label-topic')) document.getElementById('set-label-topic').value = settings.labelTopic || '[YOUR TOPIC]';
+    if (document.getElementById('set-label-product')) document.getElementById('set-label-product').value = settings.labelProduct || '[YOUR PRODUCT]';
+    if (document.getElementById('set-label-text')) document.getElementById('set-label-text').value = settings.labelText || '[YOUR TEXT]';
+
+    if (settings.excludeAIs) {
+        if (document.getElementById('ex-chatgpt')) document.getElementById('ex-chatgpt').checked = settings.excludeAIs.chatgpt === true;
+        if (document.getElementById('ex-gemini')) document.getElementById('ex-gemini').checked = settings.excludeAIs.gemini === true;
+        if (document.getElementById('ex-claude')) document.getElementById('ex-claude').checked = settings.excludeAIs.claude === true;
+        if (document.getElementById('ex-leonardo')) document.getElementById('ex-leonardo').checked = settings.excludeAIs.leonardo === true;
+    }
+
+    // Apply UI visibility based on settings
+    const topAiSelector = document.getElementById('hub-ai-selector');
+    if (topAiSelector) topAiSelector.style.display = settings.addAiIconTop ? 'block' : 'none';
+
+    // Notion & Lookupper Sync
+    if (document.getElementById('set-notion-api-key')) document.getElementById('set-notion-api-key').value = settings.notionApiKey || '';
+    if (document.getElementById('set-notion-db-id')) document.getElementById('set-notion-db-id').value = settings.notionDatabaseId || '';
+    if (document.getElementById('set-shortcut-lookupper')) document.getElementById('set-shortcut-lookupper').value = settings.lookupperShortcut || 'Alt+Q';
+    if (document.getElementById('set-lookupper-privacy')) document.getElementById('set-lookupper-privacy').checked = settings.lookupperPrivacy !== false;
+    if (document.getElementById('set-lookupper-autospeak')) document.getElementById('set-lookupper-autospeak').checked = settings.lookupperAutoSpeak === true;
+    
+    // Aura AI 3.0 Modular Gating
+    refreshModularUI();
 }
 
 let isSyncing = false;
@@ -1259,6 +2183,8 @@ async function syncWithCloud() {
     }
     isSyncing = false;
 }
+
+// [MOVED TO PLATFORM CORE]
 
 async function saveToCloud() {
     if (!window.USER_DOC_REF) return;
@@ -1289,14 +2215,55 @@ function loadSettings() {
         if (settings.showChatGPT === undefined) settings.showChatGPT = true;
         if (settings.showClaude === undefined) settings.showClaude = true;
         if (settings.showDeepSeek === undefined) settings.showDeepSeek = true;
+        if (settings.showDeepSeek === undefined) settings.showDeepSeek = true;
         if (settings.showLeonardo === undefined) settings.showLeonardo = true;
+        if (settings.showBing === undefined) settings.showBing = true;
+        if (settings.showPerplexity === undefined) settings.showPerplexity = true;
+        if (settings.showGrok === undefined) settings.showGrok = true;
+        if (settings.showDuck === undefined) settings.showDuck = true;
+
+        // Ensure new AIs are in panelOrder
+        const newAIs = ['bing', 'perplexity', 'grok', 'duck'];
+        newAIs.forEach(ai => {
+            if (!settings.panelOrder.includes(ai)) settings.panelOrder.push(ai);
+        });
 
         if (settings.showGraphicDesign === undefined) settings.showGraphicDesign = false;
         if (!settings.customTabs) settings.customTabs = [];
 
         if (!settings.currentMode) settings.currentMode = 'general';
-        if (!settings.customPrompts) settings.customPrompts = JSON.parse(JSON.stringify(defaultPrompts));
+        if (!settings.customPrompts || !Array.isArray(settings.customPrompts)) {
+            settings.customPrompts = JSON.parse(JSON.stringify(defaultCustomPrompts));
+        }
         
+        // Ensure new Professional Settings for legacy users
+        if (settings.autoOpenSidebar === undefined) settings.autoOpenSidebar = true;
+        if (settings.autoHideSidebar === undefined) settings.autoHideSidebar = false;
+        if (settings.addAiIconTop === undefined) settings.addAiIconTop = true;
+        if (settings.autoInputOnly === undefined) settings.autoInputOnly = false;
+        if (settings.labelTopic === undefined) settings.labelTopic = '[YOUR TOPIC]';
+        if (settings.labelProduct === undefined) settings.labelProduct = '[YOUR PRODUCT]';
+        if (settings.labelText === undefined) settings.labelText = '[YOUR TEXT]';
+        if (settings.excludeAIs === undefined) settings.excludeAIs = { chatgpt: false, gemini: false, claude: false, leonardo: false };
+        if (settings.notionApiKey === undefined) settings.notionApiKey = '';
+        if (settings.notionDatabaseId === undefined) settings.notionDatabaseId = '';
+        if (settings.lookupperShortcut === undefined) settings.lookupperShortcut = 'Alt+Q';
+        if (settings.lookupperPrivacy === undefined) settings.lookupperPrivacy = true;
+        if (settings.lookupperAutoSpeak === undefined) settings.lookupperAutoSpeak = false;
+        if (settings.lookupperEnabled === undefined) settings.lookupperEnabled = true;
+        if (settings.lookupperMemory === undefined) settings.lookupperMemory = {};
+
+        // Migrate to Modular Add-ons (Aura AI 3.0)
+        if (!settings.addons) {
+            settings.addons = {
+                translateOverlay: { installed: true, enabled: settings.lookupperEnabled !== false },
+                ocrEngine: { installed: true, enabled: true },
+                localAI: { installed: settings.useApiMode === true, enabled: settings.useApiMode === true },
+                aiHub: { installed: true, enabled: true }
+            };
+            settings.firstLaunch = false; // Legacy users don't need onboarding
+        }
+
         // Migration and Ensure full shortcut structure
         if (!settings.shortcuts || typeof settings.shortcuts.enabled === 'undefined') {
             const isMac = window.electronAPI && window.electronAPI.isMac;
@@ -1360,15 +2327,273 @@ function loadSettings() {
     }
 
     applySettingsToUI();
+    refreshModularUI();
 
     // Initiate background sync with Firestore
     syncWithCloud();
 
     // Sync shortcuts to Main Process on startup
     if (settings.shortcuts) {
-        window.electronAPI.send('toMain', { type: 'update-shortcuts', shortcuts: settings.shortcuts });
+        window.electronAPI.send('toMain', { 
+            type: 'update-shortcuts', 
+            shortcuts: {
+                ...settings.shortcuts,
+                lookupper: { enabled: settings.lookupperEnabled !== false, key: settings.lookupperShortcut || 'Alt+Q' }
+            } 
+        });
+    }
+
+    // [EN] Sidebar Auto-Open Logic
+    // [TH] ตรรกะการเปิด Sidebar อัตโนมัติ
+    if (settings.autoOpenSidebar) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.remove('hidden');
+    }
+
+    // [EN] Version Display
+    // [TH] แสดงเวอร์ชัน
+    const versionText = document.getElementById('current-version-display');
+    if (versionText) versionText.innerText = 'v2.1.0'; // Updated Professional Version
+
+    // [EN] Local AI Health Check & Pro Onboarding
+    // [TH] ตรวจสอบสถานะ AI และเริ่มระบบแนะนำ (Onboarding)
+    setTimeout(initAuraHome, 3000);
+}
+
+// --- AURA HOME: PLATFORM ONBOARDING (Aura AI 3.0) --- //
+async function initAuraHome() {
+    // Check if first launch
+    const firstLaunch = settings.firstLaunch !== false;
+    
+    if (firstLaunch) {
+        showAuraHomeModal();
+    } else {
+        // Just check local AI health in background if already onboarded
+        checkLocalAIConnection().then(hasLocal => {
+            if (hasLocal) updateLocalAIStatus();
+        });
     }
 }
+
+function showAuraHomeModal() {
+    const modal = document.getElementById('modal-aura-home');
+    if (modal) modal.classList.remove('hidden');
+
+    const btnRecommended = document.getElementById('btn-onboarding-recommended');
+    const btnCustomize = document.getElementById('btn-onboarding-customize');
+
+    if (btnRecommended) {
+        btnRecommended.onclick = () => {
+            // Apply Recommended Setup
+            updateAddonState('translateOverlay', { installed: true, enabled: true });
+            updateAddonState('aiHub', { installed: true, enabled: true });
+            
+            settings.firstLaunch = false;
+            saveSettings();
+            
+            modal.classList.add('hidden');
+            showToast("✨ Aura AI 3.0: Powered by AI. Ready instantly.");
+            
+            // First Success Moment: Suggest trial
+            setTimeout(() => {
+                showToast("🚀 Try this: Press Alt+Q anywhere to translate.");
+            }, 2000);
+        };
+    }
+
+    if (btnCustomize) {
+        btnCustomize.onclick = () => {
+            settings.firstLaunch = false;
+            saveSettings();
+            modal.classList.add('hidden');
+            
+            // Open Add-on Manager (Store)
+            if (typeof openStore === 'function') openStore();
+            else if (storeOverlay) storeOverlay.classList.remove('hidden');
+        };
+    }
+}
+
+// Keep the technical setup modal for later use in the Store
+async function initProOnboarding() {
+    // Legacy support or fallback
+}
+
+async function checkLocalAIConnection() {
+    try {
+        const endpoint = (settings.localAIEndpoint || "http://127.0.0.1:11434").trim();
+        let baseUrl = endpoint.replace(/\/v1\/chat\/completions\/?$/, '').replace(/\/$/, '');
+        if (!baseUrl.startsWith('http')) baseUrl = `http://${baseUrl}`;
+        
+        // ping the status endpoint (HEAD request is fast)
+        const res = await fetch(`${baseUrl}/api/tags`, { method: 'HEAD' }).catch(() => null);
+        return res && res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+function showLocalAISetupModal() {
+    const modal = document.getElementById('modal-local-ai-setup');
+    if (modal) modal.classList.remove('hidden');
+
+    const btnInstall = document.getElementById('btn-install-local-ai');
+    const btnSkip = document.getElementById('btn-skip-local-ai');
+
+    if (btnInstall) {
+        btnInstall.onclick = () => {
+            document.getElementById('onboarding-initial-actions').classList.add('hidden');
+            document.getElementById('setup-progress-container').classList.remove('hidden');
+            
+            // Trigger Install via IPC
+            window.electronAPI.send('toMain', { type: 'ollama-install' });
+        };
+    }
+
+    // [EN] Manual Trigger from Settings
+    // [TH] ปุ่มติดตั้ง AI จากหน้าการตั้งค่า
+    const btnSettingsInstall = document.getElementById('btn-settings-install-ai');
+    if (btnSettingsInstall) {
+        btnSettingsInstall.onclick = () => {
+            // Close settings to show onboarding or just use onboarding modal? 
+            // Let's just show the onboarding modal as it's already built for progress
+            showLocalAISetupModal();
+        };
+    }
+
+    const btnSettingsCheck = document.getElementById('btn-settings-check-local');
+    if (btnSettingsCheck) {
+        btnSettingsCheck.onclick = async () => {
+            btnSettingsCheck.innerText = "⏳ Checking...";
+            await updateLocalAIStatus();
+            btnSettingsCheck.innerText = "🔍 Check Status";
+            showToast("✅ Local AI Check Complete.");
+        };
+    }
+
+    const btnEditEndpoint = document.getElementById('btn-edit-endpoint');
+    if (btnEditEndpoint) {
+        btnEditEndpoint.onclick = () => {
+            const endpointInput = document.getElementById('set-openrouter-key');
+            if (endpointInput) {
+                const isReadOnly = endpointInput.hasAttribute('readonly');
+                if (isReadOnly) {
+                    endpointInput.removeAttribute('readonly');
+                    endpointInput.style.background = "rgba(255,255,255,0.05)";
+                    endpointInput.style.cursor = "text";
+                    endpointInput.style.opacity = "1";
+                    btnEditEndpoint.innerText = "🔓";
+                    showToast("⚠️ Advanced Mode: Endpoint URL Unlocked.");
+                } else {
+                    endpointInput.setAttribute('readonly', true);
+                    endpointInput.style.background = "rgba(0,0,0,0.2)";
+                    endpointInput.style.cursor = "not-allowed";
+                    endpointInput.style.opacity = "0.8";
+                    btnEditEndpoint.innerText = "✏️";
+                }
+            }
+        };
+    }
+}
+
+// IPC Listeners for Installation Progress
+window.electronAPI.receive('fromMain', (data) => {
+    if (data.type === 'ollama-progress') {
+        const bar = document.getElementById('setup-progress-bar');
+        const text = document.getElementById('setup-progress-percent');
+        if (bar) bar.style.width = `${data.percent}%`;
+        if (text) text.innerText = `${data.percent}%`;
+    } else if (data.type === 'ollama-success') {
+        const progressContainer = document.getElementById('setup-progress-container');
+        const successMsg = document.getElementById('onboarding-success-msg');
+        if (progressContainer) progressContainer.classList.add('hidden');
+        if (successMsg) successMsg.classList.remove('hidden');
+        localStorage.setItem('aura_onboarding_done', 'true');
+        updateLocalAIStatus(); // Refresh model list
+    } else if (data.type === 'ollama-error') {
+        showToast("❌ Error installing AI: " + data.message);
+        const initialActions = document.getElementById('onboarding-initial-actions');
+        const progressContainer = document.getElementById('setup-progress-container');
+        if (initialActions) initialActions.classList.remove('hidden');
+        if (progressContainer) progressContainer.classList.add('hidden');
+    }
+});
+
+// --- LOCAL AI DYNAMIC DISCOVERY --- //
+async function updateLocalAIStatus() {
+    const endpoint = (settings.openRouterKey || "http://127.0.0.1:11434").trim();
+    const statusDots = document.querySelectorAll('#panel-api .status-dot');
+    const modelSelector = document.getElementById('api-model-selector');
+    
+    let baseUrl = endpoint.replace(/\/v1\/chat\/completions\/?$/, '').replace(/\/$/, '');
+    if (!baseUrl.startsWith('http')) baseUrl = `http://${baseUrl}`;
+
+    try {
+        // Try fetching tags (Ollama style) or models (OpenAI style)
+        let response = await fetch(`${baseUrl}/api/tags`).catch(() => null);
+        let isOllama = true;
+        
+        if (!response || !response.ok) {
+            response = await fetch(`${baseUrl}/v1/models`).catch(() => null);
+            isOllama = false;
+        }
+
+        if (response && response.ok) {
+            const data = await response.json();
+            statusDots.forEach(dot => {
+                dot.style.background = '#10b981';
+                dot.title = "Local AI Server Connected";
+            });
+
+            // Populate models if selector exists
+            if (modelSelector) {
+                const currentVal = modelSelector.value;
+                modelSelector.innerHTML = '';
+                
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = isOllama ? "🦙 Ollama Models Found" : "🛸 Local Models Found";
+                
+                let models = [];
+                if (isOllama && data.models) models = data.models.map(m => m.name);
+                else if (data.data) models = data.data.map(m => m.id);
+
+                if (models.length > 0) {
+                    models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.innerText = m;
+                        optGroup.appendChild(opt);
+                    });
+                    modelSelector.appendChild(optGroup);
+                    
+                    // Restore previous value if it still exists
+                    if (models.includes(currentVal)) modelSelector.value = currentVal;
+                    else modelSelector.selectedIndex = 0;
+                } else {
+                    const opt = document.createElement('option');
+                    opt.innerText = "No models found. Please download one!";
+                    modelSelector.appendChild(opt);
+                }
+            }
+            console.log("[Aura AI] Local AI Status: Connected ✅");
+        } else {
+            throw new Error("Offline");
+        }
+    } catch (err) {
+        statusDots.forEach(dot => {
+            dot.style.background = '#ef4444';
+            dot.title = "Local AI Server Disconnected. Is it running?";
+        });
+        console.warn("[Aura AI] Local AI Status: Disconnected ❌");
+    }
+}
+// Manually refresh models every 30 seconds if panel is visible
+setInterval(() => {
+    const apiPanel = document.getElementById('panel-api');
+    if (apiPanel && !apiPanel.classList.contains('hidden')) {
+        updateLocalAIStatus();
+    }
+}, 30000);
 
 function saveSettings() {
     try {
@@ -1417,6 +2642,8 @@ function saveSettings() {
         let chkApiMode = document.getElementById('set-use-api-mode');
         if (chkApiMode) settings.useApiMode = chkApiMode.checked;
 
+        const txtApiKey = document.getElementById('set-openrouter-key');
+
         // Custom Shortcuts
         const chkShortcutsEnabled = document.getElementById('set-shortcuts-enabled');
         if (chkShortcutsEnabled) settings.shortcuts.enabled = chkShortcutsEnabled.checked;
@@ -1440,17 +2667,57 @@ function saveSettings() {
         collectShortcut('p5', 'p5');
 
         // Notify Main Process about shortcut changes
-        window.electronAPI.send('toMain', { type: 'update-shortcuts', shortcuts: settings.shortcuts });
+        window.electronAPI.send('toMain', { 
+            type: 'update-shortcuts', 
+            shortcuts: {
+                ...settings.shortcuts,
+                lookupper: { enabled: settings.lookupperEnabled !== false, key: settings.lookupperShortcut || 'Alt+Q' }
+            } 
+        });
 
-        // Save visibility flags
-        if (document.getElementById('set-show-gemini')) settings.showGemini = document.getElementById('set-show-gemini').checked;
-        if (document.getElementById('set-show-chatgpt')) settings.showChatGPT = document.getElementById('set-show-chatgpt').checked;
-        if (document.getElementById('set-show-claude')) settings.showClaude = document.getElementById('set-show-claude').checked;
-        if (document.getElementById('set-show-deepseek')) settings.showDeepSeek = document.getElementById('set-show-deepseek').checked;
-        if (document.getElementById('set-show-leonardo')) settings.showLeonardo = document.getElementById('set-show-leonardo').checked;
+        // AI Visibility (Always Tab)
+        const providers = ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'bing', 'perplexity', 'grok', 'duck'];
+        providers.forEach(p => {
+            const chk = document.getElementById(`set-show-${p}`);
+            if (chk) settings[`show${p.charAt(0).toUpperCase() + p.slice(1)}`] = chk.checked;
+        });
 
-        let txtApiKey = document.getElementById('set-openrouter-key');
+        // Prompt Templates (Prompts Tab)
+        let newPrompts = [];
+        for (let i = 1; i <= 8; i++) {
+            const lbl = document.getElementById(`p-label-${i}`);
+            const cnt = document.getElementById(`p-content-${i}`);
+            if (lbl && cnt && lbl.value.trim()) {
+                newPrompts.push({ name: lbl.value.trim(), text: cnt.value.trim() });
+            }
+        }
+        if (newPrompts.length > 0) settings.customPrompts = newPrompts;
+
+        // New Professional Settings Save
+        settings.autoOpenSidebar = document.getElementById('set-auto-open-sidebar')?.checked ?? settings.autoOpenSidebar;
+        settings.autoHideSidebar = document.getElementById('set-auto-hide-sidebar')?.checked ?? settings.autoHideSidebar;
+        settings.addAiIconTop = document.getElementById('set-add-ai-icon-top')?.checked ?? settings.addAiIconTop;
+        settings.autoInputOnly = document.getElementById('set-auto-input-only')?.checked ?? settings.autoInputOnly;
+
+        settings.labelTopic = document.getElementById('set-label-topic')?.value.trim() || settings.labelTopic;
+        settings.labelProduct = document.getElementById('set-label-product')?.value.trim() || settings.labelProduct;
+        settings.labelText = document.getElementById('set-label-text')?.value.trim() || settings.labelText;
+
+        if (settings.excludeAIs) {
+            settings.excludeAIs.chatgpt = document.getElementById('ex-chatgpt')?.checked ?? settings.excludeAIs.chatgpt;
+            settings.excludeAIs.gemini = document.getElementById('ex-gemini')?.checked ?? settings.excludeAIs.gemini;
+            settings.excludeAIs.claude = document.getElementById('ex-claude')?.checked ?? settings.excludeAIs.claude;
+            settings.excludeAIs.leonardo = document.getElementById('ex-leonardo')?.checked ?? settings.excludeAIs.leonardo;
+        }
+
         if (txtApiKey) settings.openRouterKey = txtApiKey.value.trim();
+
+        // Notion & Lookupper Save
+        settings.notionApiKey = document.getElementById('set-notion-api-key')?.value.trim() || settings.notionApiKey;
+        settings.notionDatabaseId = document.getElementById('set-notion-db-id')?.value.trim() || settings.notionDatabaseId;
+        settings.lookupperShortcut = document.getElementById('set-shortcut-lookupper')?.value.trim() || settings.lookupperShortcut;
+        settings.lookupperPrivacy = document.getElementById('set-lookupper-privacy')?.checked !== false;
+        settings.lookupperAutoSpeak = document.getElementById('set-lookupper-autospeak')?.checked === true;
 
         localStorage.setItem('aura_settings', JSON.stringify(settings));
         applySettingsToUI();
@@ -1521,77 +2788,23 @@ function matchesShortcut(e, shortcutObj) {
     return primaryMatch && shiftMatch && altMatch && keyMatch;
 }
 
-// Shortcuts Manager
-// ショートカット (Shortcut) - คีย์ลัด
+// --- Event Listeners & Managers ---
+
+
+// HUD Interaction Logic
+if (btnSendRaw) btnSendRaw.onclick = () => injectToAI(hubInput.value);
+
+// Local Hotkey Listeners (Fallback for Lookupper)
 window.addEventListener('keydown', (e) => {
-    // [EN] Skip global shortcuts if user is typing in ANY input or textarea
-    // [JP] ユーザーが入力中の場合はグローバルショートカットをスキップする
-    // [TH] ข้ามการทำงานของคีย์ลัดถ้าผู้ใช้กำลังพิมพ์อยู่ในช่อง Input ใดๆ
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-    }
-
-    if (!settings.shortcuts || !settings.shortcuts.enabled) return;
-
-    // Dynamic Shortcuts from Settings
-    if (matchesShortcut(e, settings.shortcuts.send)) {
-        e.preventDefault();
-        injectToAI(hubInput.value);
-    } else if (matchesShortcut(e, settings.shortcuts.broadcast)) {
-        e.preventDefault();
-        broadcastPrompt(hubInput.value);
-    } else if (matchesShortcut(e, settings.shortcuts.sidebar)) {
-        e.preventDefault();
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) sidebar.classList.toggle('collapsed');
-        console.log("Sidebar Toggled");
-    } else if (matchesShortcut(e, settings.shortcuts.p1)) {
-        e.preventDefault();
-        triggerPromptShortcut(0);
-    } else if (matchesShortcut(e, settings.shortcuts.p2)) {
-        e.preventDefault();
-        triggerPromptShortcut(1);
-    } else if (matchesShortcut(e, settings.shortcuts.p3)) {
-        e.preventDefault();
-        triggerPromptShortcut(2);
-    } else if (matchesShortcut(e, settings.shortcuts.p4)) {
-        e.preventDefault();
-        triggerPromptShortcut(3);
-    } else if (matchesShortcut(e, settings.shortcuts.p5)) {
-        e.preventDefault();
-        triggerPromptShortcut(4);
-    }
-    
-    // [Esc] -> Close Settings Modal
-    if (e.key === 'Escape') {
-        const settingsOverlay = document.getElementById('settings-overlay');
-        if (settingsOverlay) settingsOverlay.classList.add('hidden');
+    if (e.altKey && (e.key.toLowerCase() === 'q' || e.key.toLowerCase() === 'l')) {
+        console.log(`Renderer: Local Alt+${e.key.toUpperCase()} triggered!`);
+        window.electronAPI.send('toMain', { type: 'lookupper-capture' });
     }
 });
 
-function triggerPromptShortcut(index) {
-    const activePrompts = getActivePrompts(settings.currentMode);
-    if (activePrompts[index]) {
-        const p = activePrompts[index];
-        const userInput = hubInput ? hubInput.value.trim() : '';
-        const fullPrompt = p.text.replace('[YOUR PRODUCT]', userInput)
-            .replace('[YOUR TOPIC]', userInput)
-            .replace('[PASTE SENTENCE]', userInput)
-            .replace('[YOUR TEXT]', userInput)
-            .replace('[YOUR KANJI]', userInput);
-        injectToAI(fullPrompt);
-        showToast(`🚀 Sent Prompt: ${p.label}`);
-    }
+if (document.getElementById('btn-broadcast')) {
+    document.getElementById('btn-broadcast').onclick = () => broadcastPrompt(hubInput.value);
 }
-
-// Sync Hub Selector with Provider
-document.getElementById('hub-ai-selector').onchange = (e) => {
-    settings.provider = e.target.value;
-    applyProviderChange(settings.provider);
-};
-
-// Broadcast Logic
-document.getElementById('btn-broadcast').onclick = () => broadcastPrompt(hubInput.value);
 
 function broadcastPrompt(text) {
     const val = text.trim();
@@ -1618,6 +2831,29 @@ async function injectToSpecificAI(idOrWv, text) {
     if (!wv) return;
 
     let finalPrompt = text;
+    
+    // Replace Global Subject placeholders
+    const globalSubjectInput = document.getElementById('global-subject');
+    if (globalSubjectInput && globalSubjectInput.value.trim()) {
+        const subject = globalSubjectInput.value.trim();
+        
+        // Escape helper for RegExp
+        const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        const placeholders = [
+            [/\[SUBJECT\]/gi, subject],
+            [new RegExp(esc(settings.labelTopic || '[YOUR TOPIC]'), 'gi'), subject],
+            [new RegExp(esc(settings.labelProduct || '[YOUR PRODUCT]'), 'gi'), subject],
+            [new RegExp(esc(settings.labelText || '[YOUR TEXT]'), 'gi'), subject],
+            [/\[PASTE SENTENCE\]/gi, subject],
+            [/\[YOUR KANJI\]/gi, subject]
+        ];
+        
+        placeholders.forEach(([regex, replacement]) => {
+            finalPrompt = finalPrompt.replace(regex, replacement);
+        });
+    }
+
     if (settings.usePrefix) finalPrompt = settings.prefix.replace('{}', finalPrompt);
     if (settings.useSuffix) finalPrompt += settings.suffix;
 
@@ -1638,7 +2874,8 @@ async function injectToSpecificAI(idOrWv, text) {
                 inp.dispatchEvent(new Event('input', evConf));
                 inp.dispatchEvent(new Event('change', evConf));
 
-                if (${settings.autoSend}) {
+                const autoSendActive = ${settings.autoSend} === true && ${settings.autoInputOnly} !== true;
+                if (autoSendActive) {
                     setTimeout(() => {
                         inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
                         const sb = ['button[data-testid="send-button"]', 'button[aria-label*="Send"]', '.send-button', 'button:has(svg)'];
@@ -1656,16 +2893,23 @@ async function injectToSpecificAI(idOrWv, text) {
 
 // --- Injection & Target Management ---
 function getTargetWebview() {
-    if (settings.provider === 'api') return 'api';
-    const wv = webviews[settings.provider];
-    const panel = panels[settings.provider];
-    if (wv && panel && !panel.classList.contains('hidden')) return wv;
+    // 1. Selector Manual Override
+    if (hubAISelector && hubAISelector.value) {
+        if (hubAISelector.value === 'all') return 'broadcast';
+        return hubAISelector.value;
+    }
 
-    // Fallback: the first visible panel
+    // 2. Fallback to settings provider if visible
+    const current = settings.provider || 'gemini';
+    const panel = panels[current];
+    if (panel && !panel.classList.contains('hidden')) {
+         return current;
+    }
+
+    // 3. Fallback: the first visible panel
     const visiblePanel = Object.values(panels).find(p => p && !p.classList.contains('hidden'));
     if (visiblePanel) {
-        const id = visiblePanel.getAttribute('data-id');
-        return id === 'api' ? 'api' : webviews[id];
+        return visiblePanel.getAttribute('data-id');
     }
     return null;
 }
@@ -1673,61 +2917,104 @@ function getTargetWebview() {
 async function injectToAI(text) {
     if (!text || !text.trim()) return;
     lastPrompt = text;
+    
+    // Support Global Subject
+    let finalPrompt = text;
+    if (globalSubject && globalSubject.value.trim()) {
+        const subject = globalSubject.value.trim();
+        finalPrompt = `Regarding [ ${subject} ]:\n\n${text}`;
+    }
+
     const target = getTargetWebview();
 
-    if (target === 'api') {
-        fetchOpenRouter(text);
+    if (target === 'broadcast') {
+        btnBroadcast.click();
+    } else if (target === 'api') {
+        fetchLocalAI(finalPrompt);
     } else if (target) {
-        injectToSpecificAI(target, text);
-        showToast(`🚀 Prompt Sent to ${settings.provider.toUpperCase()}!`);
+        injectToSpecificAI(target, finalPrompt);
+        showToast(`🚀 Prompt Sent to ${target.toUpperCase()}!`);
     } else {
         showToast("⚠️ No visible AI panel to receive prompt.");
     }
     if (hubInput) hubInput.value = ''; // Auto clear
 }
 
-// UI Event Listeners & Global Controls
-const btnThemeToggleConsolidated = document.getElementById('btn-theme-toggle');
-if (btnThemeToggleConsolidated) {
-    btnThemeToggleConsolidated.onclick = () => {
-        document.body.classList.toggle('light-mode');
-        const isLight = document.body.classList.contains('light-mode');
-        btnThemeToggleConsolidated.innerText = isLight ? '☀️' : '🌙';
-        settings.theme = isLight ? 'light' : 'dark';
-        localStorage.setItem('aura_settings', JSON.stringify(settings));
+// --- Settings & UI Management ---
+
+// --- Tab Switching Logic (Pro Settings) ---
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanes = document.querySelectorAll('.tab-pane');
+
+tabButtons.forEach(btn => {
+    btn.onclick = () => {
+        const targetTab = btn.getAttribute('data-tab');
+        
+        tabButtons.forEach(b => b.classList.remove('active'));
+        tabPanes.forEach(p => p.classList.remove('active'));
+        
+        btn.classList.add('active');
+        const pane = document.getElementById(targetTab);
+        if (pane) pane.classList.add('active');
+    };
+});
+
+// --- Global Subject Sync ---
+const globalSubjectInput = document.getElementById('global-subject');
+const btnSyncSubject = document.getElementById('btn-sync-subject');
+
+if (btnSyncSubject) {
+    btnSyncSubject.onclick = () => {
+        const subject = globalSubjectInput.value.trim();
+        if (!subject) {
+            showToast("⚠️ Please enter a subject first!");
+            return;
+        }
+        showToast(`🎯 Subject synced: "${subject}"`);
+        // Optional: Trigger a broadcast with a default "Subject" prompt
+        // broadcastPrompt(`Tell me more about [SUBJECT]`);
     };
 }
 
-const btnSettingsConsolidated = document.getElementById('btn-settings');
-if (btnSettingsConsolidated) {
-    btnSettingsConsolidated.onclick = () => {
-        document.getElementById('settings-overlay').classList.remove('hidden');
+// Support Enter key in Global Subject to quickly sync
+if (globalSubjectInput) {
+    globalSubjectInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            btnSyncSubject.click();
+            e.preventDefault();
+        }
     };
 }
 
-const btnCheckUpdates = document.getElementById('btn-check-updates');
-if (btnCheckUpdates) {
-    btnCheckUpdates.onclick = () => {
-        btnCheckUpdates.disabled = true;
-        btnCheckUpdates.innerText = 'Checking...';
-        window.electronAPI.send('toMain', { type: 'check-for-updates' });
+// --- Quick Export to Clipboard (Creative Suite) ---
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-export-clipboard')) {
+        const panel = e.target.closest('.view-panel');
+        if (!panel) return;
+        const id = panel.getAttribute('data-id');
+        const wv = webviews[id];
+        if (!wv) return;
 
-        // Restore button after a short delay if no response comes back
-        setTimeout(() => {
-            btnCheckUpdates.disabled = false;
-            btnCheckUpdates.innerText = 'Check for Updates';
-        }, 8000);
-    };
-}
+        showToast(`📸 Exporting ${id.toUpperCase()} view...`);
+        
+        // Capture a screenshot of the webview and copy to clipboard
+        wv.capturePage().then(img => {
+            const dataUrl = img.toDataURL();
+            // We can't directly write to clipboard with dataURL easily in Electron renderer without bridge,
+            // but we can send it to main or use a trick.
+            // For now, let's copy the LAST PROMPT text as a fallback or if it's text.
+            window.electronAPI.send('toMain', { type: 'copy-image', dataUrl });
+            showToast("✅ Image copied to clipboard! Ready for Photoshop/Canva.");
+        }).catch(err => {
+            console.error("Export Error:", err);
+            showToast("❌ Export failed.");
+        });
+    }
+});
 
-const btnCloseSettings = document.getElementById('btn-close-settings');
-if (btnCloseSettings) {
-    btnCloseSettings.onclick = () => {
-        document.getElementById('settings-overlay').classList.add('hidden');
-    };
-}
-const btnSaveSettings = document.getElementById('btn-save-settings');
-if (btnSaveSettings) btnSaveSettings.onclick = saveSettings;
+// Hook into switchMode
+const originalSwitchMode = window.switchMode; // If it's global
+// Since it's likely not global, I'll find where it's defined and modify it.
 
 // --- Shortcut Recorder Logic ---
 // 録音機能 (Rokuon kinou) - ตัวบันทึกคีย์ลัด
@@ -1735,7 +3022,7 @@ function setupShortcutRecorders() {
     const recorderIds = [
         'set-shortcut-send', 'set-shortcut-broadcast', 'set-shortcut-sidebar', 
         'set-shortcut-global', 'set-shortcut-p1', 'set-shortcut-p2', 
-        'set-shortcut-p3', 'set-shortcut-p4', 'set-shortcut-p5'
+        'set-shortcut-p3', 'set-shortcut-p4', 'set-shortcut-p5', 'set-shortcut-lookupper'
     ];
 
     recorderIds.forEach(id => {
@@ -1824,6 +3111,18 @@ setTimeout(() => {
             settings.shortcuts = defaults;
             applySettingsToUI();
             showToast("🔄 Shortcuts Reset to Defaults!");
+        };
+    }
+
+    // Reset Prompts Logic
+    const btnResetPrompts = document.getElementById('btn-reset-prompts');
+    if (btnResetPrompts) {
+        btnResetPrompts.onclick = () => {
+            if (confirm("Reset all 8 prompt templates to defaults?")) {
+                settings.customPrompts = JSON.parse(JSON.stringify(defaultCustomPrompts));
+                applySettingsToUI();
+                showToast("🔄 Custom Prompts Reset to Defaults!");
+            }
         };
     }
 }, 1000);
@@ -2097,36 +3396,6 @@ function updateStoreButtons() {
     });
 }
 
-if (btnOpenStore) {
-    btnOpenStore.onclick = () => {
-        updateStoreButtons();
-        storeOverlay.classList.remove('hidden');
-    };
-}
-
-if (btnCloseStore) btnCloseStore.onclick = () => storeOverlay.classList.add('hidden');
-if (btnDoneStore) btnDoneStore.onclick = () => storeOverlay.classList.add('hidden');
-
-storeItems.forEach(btn => {
-    btn.onclick = () => {
-        const addon = btn.getAttribute('data-addon');
-        if (addon === 'ecommerce') {
-            settings.showEcommerce = !settings.showEcommerce;
-            showToast(settings.showEcommerce ? "✅ E-commerce Pro Installed!" : "🗑️ E-commerce Pro Uninstalled.");
-        } else if (addon === 'japanese') {
-            settings.showJapanese = !settings.showJapanese;
-            showToast(settings.showJapanese ? "✅ Japanese Tutor Installed!" : "🗑️ Japanese Tutor Uninstalled.");
-        } else if (addon === 'graphic-design') {
-            settings.showGraphicDesign = !settings.showGraphicDesign;
-            showToast(settings.showGraphicDesign ? "✅ Graphic Design Pro Installed!" : "🗑️ Graphic Design Pro Uninstalled.");
-        }
-
-        localStorage.setItem('aura_settings', JSON.stringify(settings));
-        applySettingsToUI();
-        saveToCloud(); // Save installation status
-        updateStoreButtons();
-    };
-});
 
 // Expose window functions for UI hooks defined in HTML
 window.showToast = showToast;
@@ -2158,35 +3427,10 @@ if (wvCustomForAddr) {
     wvCustomForAddr.addEventListener('did-navigate-in-page', updateAddr);
 }
 
-// --- Community Add-on Management ---
-let editingAddonId = null;
+// [EN] Community Add-on Management (Removed to fix ReferenceError)
+// [TH] จัดการ Community Add-on (ลบออกเพื่อแก้ปัญหา ReferenceError)
 
-if (btnOpenCreateAddon) btnOpenCreateAddon.onclick = () => {
-    editingAddonId = null;
-    document.getElementById('create-modal-title').innerText = "✨ Create Workspace";
-    document.getElementById('addon-name').value = "";
-    document.getElementById('addon-emoji').value = "🖋️";
-    document.getElementById('addon-desc').value = "";
-    document.getElementById('chk-publish-public').checked = false;
-    createAddonOverlay.classList.remove('hidden');
-};
-
-if (btnCloseCreateAddon) btnCloseCreateAddon.onclick = () => createAddonOverlay.classList.add('hidden');
-
-function openEditAddon(id) {
-    const mode = settings.communityModes.find(m => m.id === id);
-    if (!mode) return;
-
-    editingAddonId = id;
-    document.getElementById('create-modal-title').innerText = "⚙️ Edit Workspace";
-    document.getElementById('addon-name').value = mode.name;
-    document.getElementById('addon-emoji').value = mode.emoji;
-    document.getElementById('addon-desc').value = mode.description || "";
-    document.getElementById('chk-publish-public').checked = mode.isPublic || false;
-    createAddonOverlay.classList.remove('hidden');
-}
-
-if (btnPublishAddon) btnPublishAddon.onclick = async () => {
+if (typeof btnPublishAddon !== 'undefined' && btnPublishAddon) btnPublishAddon.onclick = async () => {
     const name = document.getElementById('addon-name').value.trim();
     const emoji = document.getElementById('addon-emoji').value.trim();
     const desc = document.getElementById('addon-desc').value.trim();
@@ -2451,6 +3695,27 @@ let currentManagingProvider = null;
 if (btnCloseLinkManager) btnCloseLinkManager.onclick = () => linkManagerOverlay.classList.add('hidden');
 if (btnSaveLinkManager) btnSaveLinkManager.onclick = () => linkManagerOverlay.classList.add('hidden');
 
+const btnAddNewLink = document.getElementById('btn-add-new-link');
+if (btnAddNewLink) {
+    btnAddNewLink.onclick = () => {
+        const newLink = { name: "New Link", url: "https://", icon: "📌" };
+        if (currentManagingProvider === 'custom') {
+            if (!settings.customAIQuickLinks) settings.customAIQuickLinks = [];
+            settings.customAIQuickLinks.push(newLink);
+        } else {
+            const tab = settings.customTabs.find(t => t.id === currentManagingProvider);
+            if (tab) {
+                if (!tab.quickLinks) tab.quickLinks = [];
+                tab.quickLinks.push(newLink);
+            }
+        }
+        saveSettings();
+        renderLinkManagerList();
+        refreshPanelToolbar(currentManagingProvider);
+        showToast("➕ New Shortcut Added!");
+    };
+}
+
 // Open Editor for Inspiration (Custom AI) Header Button
 const btnEditCustomTools = document.getElementById('btn-edit-custom-tools');
 if (btnEditCustomTools) {
@@ -2483,18 +3748,30 @@ function renderLinkManagerList() {
     links.forEach((link, idx) => {
         const item = document.createElement('div');
         item.className = 'link-item';
-        item.style = "display: flex; flex-direction: column; gap: 5px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); position: relative;";
+        item.draggable = true;
+        item.style = "display: flex; flex-direction: column; gap: 5px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: grab;";
+        
+        // Add drag handle icon
         item.innerHTML = `
+            <div class="drag-handle" style="position: absolute; left: -15px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.2); cursor: grab; font-size: 0.8rem;">⠿</div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.2rem; cursor: default;">${link.icon || '📌'}</span>
+                <input type="text" class="link-icon-input" value="${link.icon || '📌'}" title="Icon/Emoji" style="width: 30px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; text-align: center; color: white; outline: none;">
                 <input type="text" class="link-name-input" value="${link.name}" placeholder="Name" style="background: transparent; border: none; color: white; font-weight: bold; flex: 1; outline: none;">
                 <button class="delete-btn" title="Remove" style="margin-left: auto;">✕</button>
             </div>
             <input type="text" class="link-url-input" value="${link.url}" placeholder="URL" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-size: 0.75rem; border-radius: 4px; padding: 2px 8px; width: 100%; outline: none;">
         `;
         
+        const iconInput = item.querySelector('.link-icon-input');
         const nameInput = item.querySelector('.link-name-input');
         const urlInput = item.querySelector('.link-url-input');
+
+        iconInput.onchange = (e) => {
+            link.icon = e.target.value.trim() || '📌';
+            saveSettings();
+            refreshPanelToolbar(currentManagingProvider);
+            showToast("✨ Icon Updated!");
+        };
 
         nameInput.onchange = (e) => {
             link.name = e.target.value;
@@ -2513,6 +3790,26 @@ function renderLinkManagerList() {
         item.querySelector('.delete-btn').onclick = () => {
             if (confirm(`Delete shortcut "${link.name}"?`)) {
                 links.splice(idx, 1);
+                saveSettings();
+                renderLinkManagerList();
+                refreshPanelToolbar(currentManagingProvider);
+            }
+        };
+
+        // --- Drag and Drop for Shortcuts ---
+        item.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', idx);
+            item.style.opacity = '0.4';
+        };
+        item.ondragend = () => item.style.opacity = '1';
+        item.ondragover = (e) => e.preventDefault();
+        item.ondrop = (e) => {
+            e.preventDefault();
+            const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIdx = idx;
+            if (fromIdx !== toIdx) {
+                const movedItem = links.splice(fromIdx, 1)[0];
+                links.splice(toIdx, 0, movedItem);
                 saveSettings();
                 renderLinkManagerList();
                 refreshPanelToolbar(currentManagingProvider);
@@ -2709,7 +4006,7 @@ function syncCustomPanels() {
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-${tab.id}" src="${tab.url}" partition="persist:${tab.id}" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+                <webview id="wv-${tab.id}" src="${tab.url}" partition="persist:${tab.id}" allowpopups></webview>
             `;
 
             container.appendChild(panel);
@@ -2920,44 +4217,11 @@ function closeQuickSwitcher() {
     if (overlay) overlay.classList.add('hidden');
 }
 
-// Global Keyboard Listeners for Quick Switcher
-window.addEventListener('keydown', (e) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifier = isMac ? e.metaKey : e.ctrlKey;
-    
-    if (modifier && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        openQuickSwitcher();
-    }
-    
-    const overlay = document.getElementById('quick-switcher-overlay');
-    if (overlay && !overlay.classList.contains('hidden')) {
-        if (e.key === 'Escape') closeQuickSwitcher();
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            qsSelectedIndex = (qsSelectedIndex + 1) % Math.max(1, qsVisibleItems.length);
-            renderQSResults(document.getElementById('quick-switcher-input').value);
-        }
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            qsSelectedIndex = (qsSelectedIndex - 1 + qsVisibleItems.length) % Math.max(1, qsVisibleItems.length);
-            renderQSResults(document.getElementById('quick-switcher-input').value);
-        }
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (qsVisibleItems[qsSelectedIndex]) {
-                switchToView(qsVisibleItems[qsSelectedIndex].id);
-                closeQuickSwitcher();
-            }
-        }
-    }
-});
-
+// Quick Switcher Keyboard Listeners - Unified below
 document.getElementById('quick-switcher-input')?.addEventListener('input', (e) => {
     qsSelectedIndex = 0;
     renderQSResults(e.target.value);
 });
-
 
 // Open Store Hook
 if (btnOpenStore) {
@@ -2985,63 +4249,7 @@ if (window.electronAPI) {
         updateStatusEl.style.color = color || 'rgba(255,255,255,0.7)';
     };
 
-    window.electronAPI.receive('fromMain', (data) => {
-        const restoreUpdateButton = () => {
-            if (btnCheckUpdates) {
-                btnCheckUpdates.disabled = false;
-                btnCheckUpdates.innerText = 'Check for Updates';
-            }
-        };
-
-        if (data.type === 'checking-updates') {
-            setUpdateStatus('Checking for updates...', 'rgba(255,255,255,0.9)');
-        } else if (data.type === 'update-available') {
-            setUpdateStatus('New update found! Downloading in background…', 'rgba(56, 189, 248, 1)');
-            restoreUpdateButton();
-        } else if (data.type === 'update-not-available') {
-            setUpdateStatus('You are on the latest version. ✅', 'rgba(134, 239, 172, 1)');
-            restoreUpdateButton();
-        } else if (data.type === 'update-downloaded') {
-            restoreUpdateButton();
-            if (window.electronAPI && window.electronAPI.isMac) {
-                // Custom Mac Update Message
-                const msg = `🛡️ กฎของ Apple: macOS จะอนุญาตให้โปรแกรมอัปเดตตัวเองได้ ก็ต่อเมื่อโปรแกรมนั้นถูกเซ็นชื่อด้วย "ใบรับรองนักพัฒนาของ Apple" (Official Certificate) ที่ต้องเสียเงินปีละ $99 เท่านั้นครับ\n\n` +
-                            `สถานะของเรา: ตอนนี้เราใช้วิธีสร้างไฟล์แบบไม่มีใบรับรอง (Ad-hoc) เครื่อง Mac เลยมองว่าการที่เราจะโหลดไฟล์ใหม่มาทับตัวเก่าเป็นเรื่องไม่ปลอดภัย มันเลยบล็อกไว้ครับ\n\n` +
-                            `✅ วิธีแก้ง่ายๆ คือ: ให้คุณกดปุ่ม OK เพื่อเปิดไปหน้าดาวน์โหลด และโหลดไฟล์ใหม่มาทับตัวเก่าได้เลยครับ!`;
-                if (confirm(msg)) {
-                    window.open('https://github.com/ksrimalai01-sudo/Aura-Ai-Windows/releases/latest');
-                }
-            } else {
-                if (confirm('✨ New Update Downloaded! Would you like to restart and install now?')) {
-                    window.electronAPI.send('toMain', { type: 'window-control', action: 'quit-and-install' });
-                }
-            }
-        } else if (data.type === 'update-error') {
-            if (window.electronAPI && window.electronAPI.isMac) {
-                console.log("Update Error (Likely Signing): " + data.message);
-                const isSignatureErr = data.message && (data.message.includes('signature') || data.message.includes('validation'));
-                
-                if (isSignatureErr) {
-                    setUpdateStatus('⚠️ <a href="#" id="link-manual-update" style="color: #fbbf24; text-decoration: underline;">Manual update required (Signing error)</a>', '#fbbf24', true);
-                    const link = document.getElementById('link-manual-update');
-                    if (link) {
-                        link.onclick = (e) => {
-                            e.preventDefault();
-                            const msg = `🛡️ macOS บล็อกการอัปเดตอัตโนมัติเนื่องจากไม่มีใบรับรองนักพัฒนาครับ\n\nคุณสามารถกด OK เพื่อไปโหลดตัวล่าสุดมาทับตัวเก่าได้ทันที (ฟรีครับ!)`;
-                            if (confirm(msg)) {
-                                window.open('https://github.com/ksrimalai01-sudo/Aura-Ai-Windows/releases/latest');
-                            }
-                        };
-                    }
-                } else {
-                    setUpdateStatus('Manual update required (Security)', 'rgba(255, 165, 0, 1)');
-                }
-            } else {
-                setUpdateStatus('Update error: ' + (data.message || 'Unknown error'), 'rgba(248, 113, 113, 1)');
-            }
-            restoreUpdateButton();
-        }
-    });
+// IPC Handlers are unified at the top of the file.
 }
 
 // Search Listeners
@@ -3062,12 +4270,12 @@ if (searchAddonsInput) {
 }
 // Note: Initial load is now handled by onAuthStateChanged!
 
-// --- API MODE (OPENROUTER) INTEGRATION --- //
+// --- API MODE (LOCAL AI) INTEGRATION --- //
 let apiChatHistory = [];
 
-async function fetchOpenRouter(promptText) {
-    if (!settings.openRouterKey) {
-        showToast("⚠️ API Mode requires an OpenRouter API Key. Please add it in settings.");
+async function fetchLocalAI(promptText) {
+    if (!settings.useApiMode) {
+        showToast("⚠️ Local AI Mode is not enabled. Please enable it in Settings.");
         toggleView('api', true);
         applyProviderChange('api');
         return;
@@ -3112,32 +4320,32 @@ async function fetchOpenRouter(promptText) {
 
     apiChatHistory.push({ role: "user", content: promptText });
 
-    const apiKey = (settings.openRouterKey || "").trim();
-    if (!apiKey) {
-        aiTextContainer.innerHTML = `<span style="color: #ef4444;">❌ API Error: Missing API Key</span>
-        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Go to Settings and add your OpenRouter key.</p>`;
-        return;
+    const endpoint = (settings.openRouterKey || "http://127.0.0.1:11434").trim();
+    
+    // Validate or Auto-fix URL
+    let apiUrl = endpoint;
+    if (!apiUrl.startsWith('http')) apiUrl = `http://${apiUrl}`;
+    if (!apiUrl.match(/\/v1\/chat\/completions\/?$/)) {
+        apiUrl = `${apiUrl.replace(/\/$/, '')}/v1/chat/completions`;
     }
 
     try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": "https://aura-ai.local",
-                "X-Title": "Aura AI Pro",
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 model: selectedModel,
-                messages: apiChatHistory
+                messages: apiChatHistory,
+                stream: false
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             const msg = errorData.error ? errorData.error.message : response.statusText;
-            throw new Error(msg);
+            throw new Error(msg || `Status ${response.status}: Connection Failed`);
         }
 
         const data = await response.json();
@@ -3184,11 +4392,12 @@ async function fetchOpenRouter(promptText) {
         typeEffect();
 
     } catch (err) {
-        aiTextContainer.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 5px 10px; border-radius: 8px; display: block;">❌ API Error: ${err.message}</span>
-        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Check your OpenRouter API Key in Settings.</p>`;
-        console.error("OpenRouter API Error:", err);
+        aiTextContainer.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 5px 10px; border-radius: 8px; display: block;">❌ Local AI Error: ${err.message}</span>
+        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Make sure Ollama or your Local Server is running and accessible at the URL in Settings.</p>`;
+        console.error("Local AI API Error:", err);
     }
 }
+
 
 // Attach clear chat logic to the reload button of the API panel if element exists
 setTimeout(() => {
@@ -3267,81 +4476,256 @@ window.addEventListener('mouseup', () => {
 });
 // --- END RESIZE LOGIC --- //
 
-// --- PRO UTILITIES: AI DEBATE --- //
-let isDebating = false;
-
-async function startAIDebate() {
-    if (!settings.useApiMode || !settings.openRouterKey) {
-        showToast("⚠️ AI Debate requires Pro Mode (API) enabled.");
-        return;
-    }
-
-    const topic = hubInput.value.trim();
-    if (!topic) {
-        showToast("⚠️ Enter a topic in the input box first!");
-        return;
-    }
-
-    isDebating = true;
-    showToast("⚔️ Starting AI Debate on: " + topic);
-
-    // Switch to API panel to show progress
-    toggleView('api', true);
-
-    let currentContext = topic;
-
-    // Basic loop for 3 rounds
-    for (let i = 0; i < 3; i++) {
-        if (!isDebating) break;
-
-        // Round 1: AI A
-        const promptA = `Topic: ${topic}\nCurrent debate state: ${currentContext}\n\nPlease provide a strong argument/point of view on this topic. Be concise.`;
-        await fetchOpenRouter(promptA);
-
-        await new Promise(r => setTimeout(r, 4000));
-
-        // AI B Persona
-        const promptB = `You are a critic debating the following point: \n"${currentContext}"\n\nChallenge this point of view with a counter-argument. Be sharp but respectful.`;
-        await fetchOpenRouter(promptB);
-
-        await new Promise(r => setTimeout(r, 4000));
-    }
-
-    isDebating = false;
-    showToast("✅ Debate Finished.");
-}
-
-const btnDebate = document.getElementById('btn-ai-debate');
-if (btnDebate) btnDebate.onclick = startAIDebate;
-
-// --- WORKFLOW CHAIN --- //
-async function startWorkflowChain() {
-    if (!settings.useApiMode || !settings.openRouterKey) {
-        showToast("⚠️ Workflow Chain requires Pro Mode (API).");
-        return;
-    }
-
-    const input = hubInput.value.trim();
-    if (!input) {
-        showToast("⚠️ Please enter initial data to process.");
-        return;
-    }
-
-    showToast("🔗 Starting Workflow Chain...");
-    toggleView('api', true);
-
-    // Step 1: Analyze
-    const step1 = `Initial Data: ${input}\n\nTask 1: Analyze the key points and list them.`;
-    await fetchOpenRouter(step1);
-    await new Promise(r => setTimeout(r, 5000));
-
-    // Step 2: Refine / Transform
-    const step2 = `Task 2: Based on the previous analysis, write a formal report summary.`;
-    await fetchOpenRouter(step2);
-
-    showToast("✅ Workflow Chain Completed.");
-}
-
-const btnChain = document.getElementById('btn-workflow-chain');
-if (btnChain) btnChain.onclick = startWorkflowChain;
 // --- END PRO UTILITIES --- //
+
+// --- QUICK EXPORT TO CLIPBOARD --- //
+// [TH] จัดการการคัดลอกเนื้อหาจาก AI ไปยัง Clipboard
+document.getElementById('webview-container').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-export-clipboard');
+    if (!btn) return;
+
+    const panel = btn.closest('.view-panel');
+    if (!panel) return;
+    const provider = panel.getAttribute('data-id');
+    const wv = webviews[provider];
+
+    if (!wv) {
+        showToast("⚠️ Cannot export from this panel.");
+        return;
+    }
+
+    try {
+        btn.innerText = "⏳ ...";
+        btn.disabled = true;
+
+        // Try to get text response first
+        const text = await wv.executeJavaScript(`
+            (function() {
+                const selectors = ['.markdown', '.message-content', 'article', '.response-block'];
+                for (const s of selectors) {
+                    const el = document.querySelector(s);
+                    if (el) return el.innerText;
+                }
+                return "";
+            })()
+        `);
+
+        if (text) {
+            navigator.clipboard.writeText(text);
+            showToast(`📋 Text from ${provider} copied!`);
+        } else {
+            // If no text, capture as image (useful for image generators like Leonardo)
+            const image = await wv.capturePage();
+            window.electronAPI.send('toMain', { type: 'copy-image-to-clipboard', image: image.toDataURL() });
+            showToast(`🖼️ Screenshot from ${provider} copied!`);
+        }
+    } catch (err) {
+        showToast("❌ Export failed: " + err.message);
+    } finally {
+        btn.innerText = "📋 Copy";
+        btn.disabled = false;
+    }
+});
+
+// --- Creative Suite UI Toggle --- //
+// [TH] จัดการการสลับหน้าตาโปรแกรมสำหรับโหมดงานสร้างสรรค์
+function updateCreativeModeUI(mode) {
+    if (mode === 'graphic-design' || mode === 'creative') {
+        document.body.classList.add('creative-suite');
+    } else {
+        document.body.classList.remove('creative-suite');
+    }
+}
+
+// --- Tabbed Settings Initialization --- //
+// [TH] ตัวจัดการการคลิกเปลี่ยน Tab ในหน้า Settings ใหม่
+function initTabbedSettings() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+
+    tabBtns.forEach(btn => {
+        btn.onclick = () => {
+            const target = btn.getAttribute('data-tab');
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabPanes.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            const targetPane = document.getElementById(target);
+            if (targetPane) targetPane.classList.add('active');
+        };
+    });
+
+    const btnSave = document.getElementById('btn-save-settings');
+    if (btnSave) btnSave.onclick = () => {
+        saveSettings();
+    };
+    
+    const btnCancel = document.getElementById('btn-cancel-settings');
+    if (btnCancel) btnCancel.onclick = () => document.getElementById('settings-overlay').classList.add('hidden');
+    
+    const btnCloseX = document.getElementById('btn-close-settings');
+    if (btnCloseX) btnCloseX.onclick = () => document.getElementById('settings-overlay').classList.add('hidden');
+
+    const btnResetOnboarding = document.getElementById('btn-reset-onboarding');
+    if (btnResetOnboarding) {
+        btnResetOnboarding.onclick = () => {
+            localStorage.removeItem('aura_onboarding_version');
+            window.location.reload();
+        };
+    }
+}
+
+// [Ultimate Polish] Performance Guard: Reduced Motion / Low End Detection
+function checkPerformanceGuard() {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Auto-disable blur on very low window sizes or if system prefers low motion
+    if (prefersReducedMotion || window.innerWidth < 600) {
+        document.body.classList.add('no-blur');
+        console.log("[Aura AI] Performance Guard: Glassmorphism Blur Disabled.");
+    }
+}
+
+// [Ultimate Polish] Onboarding v1.3: Guided Tour
+async function initOnboardingv13() {
+    const currentVer = "1.3";
+    const savedVer = localStorage.getItem('aura_onboarding_version');
+    
+    if (savedVer === currentVer) return;
+    
+    // Welcome delayed Toast
+    setTimeout(() => {
+        showToast("🌟 Welcome to Aura AI Pro v1.3!", 5000);
+        
+        // Simple step-by-step tour using glowing effects
+        const tourSteps = [
+            { el: '#hub-input', msg: "1. Type here. We'll auto-target your active AI window! 🎯" },
+            { el: '#btn-mini-mode', msg: "2. Toggle Small UI for a distraction-free experience. 🏙️" },
+            { el: '#toggle-addons', msg: "3. Expand Add-ons for specialized E-com & Japanese tools. 🔌" },
+            { el: '#layout-style', msg: "4. Change layouts (Split, Grid, Scroll) here! 📦" }
+        ];
+        
+        let stepIdx = 0;
+        const nextStep = () => {
+            if (stepIdx >= tourSteps.length) {
+                localStorage.setItem('aura_onboarding_version', currentVer);
+                showToast("✅ Tour finished! Press Alt+Q anytime to start translating.");
+                return;
+            }
+            
+            const step = tourSteps[stepIdx];
+            const target = document.querySelector(step.el);
+            if (target) {
+                target.classList.add('glow-pulse');
+                showToast(step.msg, 4000);
+                setTimeout(() => {
+                    target.classList.remove('glow-pulse');
+                    stepIdx++;
+                    nextStep();
+                }, 4500);
+            } else {
+                stepIdx++;
+                nextStep();
+            }
+        };
+        
+        nextStep();
+    }, 2000);
+}
+
+// Settings button trigger (Sidebar Footer)
+const btnSettingsSidebar = document.getElementById('btn-settings');
+if (btnSettingsSidebar) {
+    btnSettingsSidebar.onclick = () => {
+        document.getElementById('settings-overlay')?.classList.remove('hidden');
+    };
+}
+
+// --- SMART SUGGESTIONS (Hidden Power) --- //
+// [TH] ระบบแนะนำฟีเจอร์อัจฉริยะ (ไม่รำคาญ)
+let lastClipboardText = "";
+function initSmartSuggestions() {
+    // Only suggest if Translate Overlay is installed but DISABLED
+    const isTransActive = isAddonActive('translateOverlay');
+    const isTransInstalled = settings.addons && settings.addons.translateOverlay && settings.addons.translateOverlay.installed;
+    
+    if (isTransActive || !isTransInstalled) return;
+
+    setInterval(async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text || text === lastClipboardText) return;
+            lastClipboardText = text;
+
+            // 1. Password/URL Filter
+            if (text.length > 50) return; // Too long for a quick translate suggestion
+            if (text.startsWith('http') || text.startsWith('https')) return;
+            if (/[0-9]/.test(text) && /[!@#$%^&*]/.test(text) && text.length > 8) return; // Basic password detection
+            
+            // 2. Cooldown & Frequency Guards
+            const now = Date.now();
+            const suggestionState = JSON.parse(localStorage.getItem('aura_suggestion_state') || '{"lastTime":0,"count":0,"date":""}');
+            const today = new Date().toISOString().split('T')[0];
+
+            if (suggestionState.date !== today) {
+                suggestionState.count = 0;
+                suggestionState.date = today;
+            }
+
+            if (suggestionState.count >= 2) return; // Max 2 per day
+            if (now - suggestionState.lastTime < 10 * 60 * 1000) return; // 10 min cooldown
+
+            // 3. Show Suggestion
+            showSmartSuggestionPopup(text);
+
+            // Update State
+            suggestionState.lastTime = now;
+            suggestionState.count++;
+            localStorage.setItem('aura_suggestion_state', JSON.stringify(suggestionState));
+
+        } catch (e) {
+            // Clipboard might be blocked or empty
+        }
+    }, 5000); // Check every 5s
+}
+
+function showSmartSuggestionPopup(text) {
+    const toast = document.createElement('div');
+    toast.className = 'glass-card smart-suggestion-popup';
+    toast.style.cssText = `
+        position: fixed; bottom: 20px; right: 20px; width: 280px; padding: 16px; 
+        z-index: 99999; border: 1px solid var(--border-hover); box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    `;
+    
+    toast.innerHTML = `
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div style="font-size:1.5rem;">🧠</div>
+            <div style="flex:1;">
+                <p style="margin:0; font-size:0.85rem; font-weight:700;">Translate this instantly?</p>
+                <p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">"${text}"</p>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+            <button id="btn-suggest-enable" style="flex:1; background:var(--accent); border:none; color:white; padding:6px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">Enable Translate</button>
+            <button id="btn-suggest-close" style="background:rgba(255,255,255,0.05); border:none; color:var(--text-muted); padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer;">Not now</button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    toast.querySelector('#btn-suggest-enable').onclick = () => {
+        updateAddonState('translateOverlay', { enabled: true });
+        showToast("✨ Translate Overlay Enabled! Press Alt+Q to use.");
+        toast.remove();
+    };
+    
+    toast.querySelector('#btn-suggest-close').onclick = () => toast.remove();
+    setTimeout(() => { if(toast.parentElement) toast.remove(); }, 8000);
+}
+
+// Final Initialization Call
+setTimeout(() => {
+    initTabbedSettings();
+    checkPerformanceGuard();
+    initOnboardingv13();
+    initSmartSuggestions(); // New Feature 3.0
+}, 500);

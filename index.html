@@ -2,57 +2,75 @@
 <html lang="en">
 
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; object-src 'none';">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aura AI | Professional Workspace</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Google Fonts for Premium Look -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;700&display=swap"
-        rel="stylesheet">
+    <!-- Google Fonts for Premium Look (Inter & Outfit) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <!-- Custom Title Bar -->
     <div class="title-bar">
-        <div class="title-bar-title">✨ Aura AI</div>
+        <div class="title-bar-title">✨ Aura AI <span id="title-win-mode" style="font-size: 0.6rem; opacity: 0.5; margin-left: 10px;">[PRO]</span></div>
         <div class="title-bar-drag-area"></div>
         <div class="title-bar-controls">
+            <button id="btn-mini-mode" title="Toggle Minimal Mode (Focus)">🏙️ Small UI</button>
             <button id="btn-min-win" title="Minimize">─</button>
             <button id="btn-max-win" title="Maximize">□</button>
             <button id="btn-close-win" title="Close">✕</button>
         </div>
     </div>
 
+    <div class="app-wrapper">
     <!-- Sidebar: モード切り替え (Mode kirikae) - แถบเมนูข้างเพื่อสลับโหมด -->
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
         <div class="logo">
             <span class="logo-icon">✨</span>
             <span class="logo-text">Aura <span>AI</span></span>
         </div>
 
+        <!-- Subject moved to top bar -->
         <div class="mode-switcher">
-            <h3 class="sidebar-section-title">Workspace</h3>
-            <button id="btn-general" class="active" data-mode="general">
+            <h3 class="sidebar-section-title primary-section">🚀 Workspace</h3>
+            <button id="btn-general" class="active workspace-btn" data-mode="general">
                 <span class="icon">🏠</span>
                 <span class="label">General</span>
             </button>
 
-            <h3 class="sidebar-section-title" style="margin-top: 15px;">🔌 Add-ons</h3>
-            <button id="btn-ecommerce" data-mode="ecommerce">
-                <span class="icon">🛒</span>
-                <span class="label">E-commerce Pro</span>
+            <button id="btn-trigger-lookupper" class="workspace-btn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 5px; border: none; color: white;">
+                <span class="icon">🔍</span>
+                <span class="label">Aura Translate (Alt+Q)</span>
             </button>
-            <button id="btn-graphic-design" data-mode="graphic-design">
-                <span class="icon">🎨</span>
-                <span class="label">Graphic Design Pro</span>
-            </button>
-            <button id="btn-japanese" data-mode="japanese">
-                <span class="icon">⛩️</span>
-                <span class="label">Japanese Tutor</span>
-            </button>
-            <div id="community-modes-container" style="display: flex; flex-direction: column; gap: 0;">
-                <!-- Managed by renderer.js -->
+
+            <h3 class="sidebar-section-title collapsible-trigger" id="toggle-addons" style="margin-top: 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <span>🔌 Add-ons</span>
+                <span class="arrow">▼</span>
+            </h3>
+            <div id="addons-collapsible" class="collapsible-content">
+                <div id="lookupper-help-card" style="background: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                    <div style="font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-bottom: 4px;">🎯 Quick Translate</div>
+                    <div style="font-size: 0.7rem; opacity: 0.8;">Point mouse & press <span style="color: white; font-weight: bold;">Alt + Q</span></div>
+                </div>
+                <button id="btn-ecommerce" data-mode="ecommerce" class="sidebar-sub-btn">
+                    <span class="icon">🛒</span>
+                    <span class="label">E-commerce Pro</span>
+                </button>
+                <button id="btn-graphic-design" data-mode="graphic-design" class="sidebar-sub-btn">
+                    <span class="icon">🎨</span>
+                    <span class="label">Graphic Design Pro</span>
+                </button>
+                <button id="btn-japanese" data-mode="japanese" class="sidebar-sub-btn">
+                    <span class="icon">⛩️</span>
+                    <span class="label">Japanese Tutor</span>
+                </button>
+                <div id="community-modes-container" style="display: flex; flex-direction: column; gap: 0;">
+                    <!-- Managed by renderer.js -->
+                </div>
             </div>
 
             <h3 class="sidebar-section-title" style="margin-top: 15px;">🌐 Custom Webviews</h3>
@@ -64,22 +82,19 @@
                 <span class="label">Add New Webview</span>
             </button>
 
+            <!-- Aura Translate Add-on Button -->
+            <button id="btn-trigger-lookupper" class="hidden" style="margin-top: 10px; margin-bottom: 5px;">
+                <span class="icon">🌐</span>
+                <span class="label">Aura Translate</span>
+                <span class="shortcut" style="margin-left: auto; font-size: 0.65rem; opacity: 0.5;">Alt+Q</span>
+            </button>
+
             <button id="btn-open-store" class="add-plugin-btn">
                 <span class="icon">➕</span>
                 <span class="label">Get More...</span>
             </button>
 
-            <div id="pro-utilities" style="display: none; flex-direction: column; gap: 10px; margin-top: 15px;">
-                <h3 class="pro-utilities-title">🌟 Pro Utilities</h3>
-                <button id="btn-ai-debate">
-                    <span class="icon">⚔️</span>
-                    <span class="label">AI Debate</span>
-                </button>
-                <button id="btn-workflow-chain">
-                    <span class="icon">🔗</span>
-                    <span class="label">Workflow Chain</span>
-                </button>
-            </div>
+            <!-- Pro Utilities (Removed to declutter UI for now) -->
         </div>
 
         <!-- Prompt Library / プロンプト集 (Prompt-shuu) - คลังคำสั่ง -->
@@ -106,6 +121,7 @@
         <div class="sidebar-footer"
             style="padding: 10px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
             <div class="footer-icons" style="display: flex; justify-content: space-around; align-items: center;">
+                <button id="btn-minimal-toggle" class="icon-only-btn" title="Minimal Mode [Focus]">🏙️</button>
                 <button id="btn-theme-toggle" class="icon-only-btn" title="Toggle Theme">🌙</button>
                 <button id="btn-settings" class="icon-only-btn" title="Settings">⚙️</button>
                 <button id="btn-logout" class="icon-only-btn" title="Sign Out" style="color: #ef4444;">🚪</button>
@@ -126,29 +142,44 @@
     <main class="content">
         <!-- Smart Hub: Top Bar for Quick Commands -->
         <header class="smart-hub">
-            <div class="input-container">
-                <button id="btn-toggle-sidebar" class="hub-select" style="padding: 0 15px; font-weight: bold;"
+            <div class="input-container" style="flex-wrap: wrap; gap: 8px;">
+                <button id="btn-toggle-sidebar" class="hub-select" style="padding: 0 15px; font-weight: bold; height: 40px;"
                     title="Toggle Sidebar (Ctrl+G)">☰</button>
-                <select id="hub-ai-selector" class="hub-select">
+                
+                <select id="hub-ai-selector" class="hub-select" style="max-width: 140px; height: 40px;">
+                    <option value="all">📢 ALL AI (Broadcast)</option>
                     <option value="gemini">Gemini</option>
                     <option value="chatgpt">ChatGPT</option>
                     <option value="claude">Claude</option>
                     <option value="deepseek">DeepSeek</option>
-                    <option value="api">🌟 Aura Pro</option>
+                    <option value="api">🏠 Aura Local AI</option>
+                    <option value="custom">🔗 Custom AI</option>
                 </select>
-                <input type="text" id="hub-input" placeholder="Type prompt here... (Ctrl+H to send)"
-                    title="Shortcut: Ctrl+H (Send to single), Ctrl+Shift+H (Broadcast)">
-                <button id="btn-send-raw" title="Send (Ctrl+H)">🚀 Send</button>
-                <button id="btn-broadcast" title="Broadcast to ALL (Ctrl+Shift+H)"
-                    style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">📢
-                    Broadcast</button>
+
+                <div id="input-target-badge" class="hub-chip hidden" style="font-size:0.7rem; padding: 4px 10px; border-radius: 99px; background: rgba(56, 189, 248, 0.15); color: var(--accent); white-space: nowrap;">
+                    → ALL AI 🔵
+                </div>
                 
-                <div style="display: flex; align-items: center; gap: 6px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 5px;">
-                    <label class="switch" style="scale: 0.65;" title="Auto-Send Prompt (Enter only)">
-                        <input type="checkbox" id="chk-auto-send-main">
-                        <span class="slider round"></span>
-                    </label>
-                    <span style="font-size: 0.65rem; color: var(--accent-color); font-weight: bold; white-space: nowrap;">⚡ Auto-Send</span>
+                <!-- Compact Subject Input -->
+                <div style="display: flex; align-items: center; background: rgba(0,0,0,0.4); border-radius: 8px; border: 1px solid var(--glass-border); padding: 0 5px; height: 40px;">
+                    <span style="font-size: 0.7rem; color: var(--accent); padding: 0 8px; font-weight: bold;">🎯 Subject</span>
+                    <input type="text" id="global-subject" placeholder="Current topic..." style="width: 120px; background: transparent; border: none; color: white; outline: none; font-size: 0.85rem;">
+                </div>
+
+                <div class="hub-input-wrapper" style="position: relative; flex: 1; min-width: 200px; display: flex; align-items: center;">
+                    <input type="text" id="hub-input" placeholder="Type prompt here... (Ctrl+H to send)"
+                        title="Shortcut: Ctrl+H (Send to single), Ctrl+Shift+H (Broadcast)" style="height: 40px;">
+                </div>
+
+                <div style="display: flex; gap: 4px; height: 40px;">
+                    <button id="btn-send-raw" title="Send (Ctrl+H)" class="action-btn" style="background: var(--accent); color: black;">🚀</button>
+                    <button id="btn-broadcast" title="Broadcast to ALL (Ctrl+Shift+H)" class="action-btn" style="background: #f59e0b; color: black; padding: 0 12px; font-weight: bold;">📢 All</button>
+                    <button class="action-btn" style="background: rgba(255,255,255,0.1); padding: 0 5px;">
+                        <label class="switch" style="scale: 0.6; margin: 0;" title="Auto-Send">
+                            <input type="checkbox" id="chk-auto-send-main">
+                            <span class="slider round"></span>
+                        </label>
+                    </button>
                 </div>
             </div>
             <div id="quick-chips" class="quick-chips">
@@ -175,7 +206,7 @@
             </div>
         </header>
 
-        <div class="webview-stack" id="webview-container">
+        <div class="webview-stack hidden" id="webview-container">
             <!-- Aura Dashboard (Empty State) -->
             <div class="dashboard-panel" id="panel-dashboard">
                 <div class="dash-logo">✨</div>
@@ -185,20 +216,20 @@
 
                 <div class="dash-grid">
                     <div class="dash-card"
-                        onclick="document.getElementById('hub-ai-selector').value='api'; document.dispatchEvent(new Event('change', {bubbles:true}));">
-                        <i>🚀</i>
-                        <h3>Pro Mode</h3>
-                        <p>Access high-end LLMs directly via OpenRouter API.</p>
+                        onclick="toggleView('api', true); applyProviderChange('api');">
+                        <i>🏠</i>
+                        <h3>Aura Local AI</h3>
+                        <p>Connect to Ollama, LM Studio, or any OpenAI-compatible Local Server.</p>
                     </div>
-                    <div class="dash-card" onclick="document.getElementById('btn-ai-debate').click();">
-                        <i>⚔️</i>
-                        <h3>AI Debate</h3>
-                        <p>Watch multiple AIs debate a topic to find the best truth.</p>
+                    <div class="dash-card" onclick="document.getElementById('btn-trigger-lookupper').click();">
+                        <i>🔍</i>
+                        <h3>OCR Lookupper</h3>
+                        <p>Translate or analyze anything on your screen (Alt+Q).</p>
                     </div>
-                    <div class="dash-card" onclick="document.getElementById('btn-workflow-chain').click();">
-                        <i>🔗</i>
-                        <h3>AI Workflow</h3>
-                        <p>Chain multiple prompts to automate complex tasks.</p>
+                    <div class="dash-card" onclick="document.getElementById('btn-settings').click();">
+                        <i>⚙️</i>
+                        <h3>Ready to Go</h3>
+                        <p>Customize your AI Workspace and start your deep work session.</p>
                     </div>
                 </div>
 
@@ -218,6 +249,7 @@
                         <span class="view-title">Gemini</span>
                     </div>
                     <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -227,7 +259,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-gemini" src="https://gemini.google.com" partition="persist:gemini" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups>
+                <webview id="wv-gemini" data-src="https://gemini.google.com" partition="persist:gemini">
                 </webview>
             </div>
 
@@ -238,6 +270,7 @@
                         <span class="view-title">ChatGPT</span>
                     </div>
                     <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -247,7 +280,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-chatgpt" src="https://chatgpt.com" partition="persist:chatgpt" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+                <webview id="wv-chatgpt" data-src="https://chatgpt.com" partition="persist:chatgpt" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-claude" data-id="claude">
@@ -257,6 +290,7 @@
                         <span class="view-title">Claude</span>
                     </div>
                     <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -266,7 +300,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-claude" src="https://claude.ai" partition="persist:claude" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+                <webview id="wv-claude" data-src="https://claude.ai" partition="persist:claude" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-deepseek" data-id="deepseek">
@@ -276,6 +310,7 @@
                         <span class="view-title">DeepSeek</span>
                     </div>
                     <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -285,7 +320,7 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups>
+                <webview id="wv-deepseek" data-src="https://chat.deepseek.com" partition="persist:deepseek">
                 </webview>
             </div>
 
@@ -296,6 +331,7 @@
                         <span class="view-title">Leonardo AI</span>
                     </div>
                     <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -305,30 +341,95 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-leonardo" src="https://leonardo.ai" partition="persist:leonardo" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+                <webview id="wv-leonardo" data-src="https://leonardo.ai" partition="persist:leonardo" allowpopups></webview>
+            </div>
+
+            <!-- New AI Providers (Creative Suite Expansion) -->
+            <div class="view-panel hidden" id="panel-bing" data-id="bing">
+                <div class="view-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Bing Chat (Copilot)</span>
+                    </div>
+                    <div class="view-actions">
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋</button>
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-bing" data-src="https://www.bing.com/chat" partition="persist:bing" allowpopups></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-perplexity" data-id="perplexity">
+                <div class="view-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Perplexity</span>
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋 Copy</button>
+                    </div>
+                    <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-perplexity" data-src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-grok" data-id="grok">
+                <div class="view-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Grok AI</span>
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋 Copy</button>
+                    </div>
+                    <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-grok" data-src="https://x.com/i/grok" partition="persist:grok" allowpopups></webview>
+            </div>
+
+            <div class="view-panel hidden" id="panel-duck" data-id="duck">
+                <div class="view-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot" title="Ready"></span>
+                        <span class="view-title">Duck AI</span>
+                        <button class="btn-export-clipboard" title="Copy Current View to Clipboard">📋 Copy</button>
+                    </div>
+                    <div class="view-actions">
+                        <button class="btn-focus" title="Focus Mode">⤢</button>
+                        <button class="btn-reload" title="Reload Page">🔁</button>
+                        <button class="btn-close-panel" title="Close">✕</button>
+                    </div>
+                </div>
+                <webview id="wv-duck" data-src="https://duckduckgo.com/?q=DuckDuckGo+AI-Chat" partition="persist:duck" allowpopups></webview>
             </div>
 
             <div class="view-panel hidden" id="panel-api" data-id="api">
                 <div class="view-header">
                     <div style="display:flex; align-items:center;">
                         <span class="status-dot" title="Ready"></span>
-                        <span class="view-title" style="color: #fbbf24;">🌟 Aura Pro (API)</span>
+                        <span class="view-title" style="color: #10b981;">🏡 Aura Local AI</span>
                     </div>
                     <div class="view-actions">
                         <select id="api-model-selector" class="hub-select"
-                            style="max-width: 180px; background: rgba(255,215,0,0.1); border: 1px solid #fbbf24; color: #fbbf24;">
-                            <optgroup label="🔥 Top Tier (Paid)">
-                                <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                                <option value="openai/gpt-4o-mini">GPT-4o Mini (Cheap)</option>
-                                <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B</option>
-                            </optgroup>
-                            <optgroup label="🆓 Stable Free Models">
-                                <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</option>
-                                <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
-                                <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B (Free)</option>
-                                <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Free)</option>
+                            style="max-width: 180px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981;">
+                            <optgroup label="🦙 Common Local Models">
+                                <option value="llama3.2">Llama 3.2</option>
+                                <option value="mistral">Mistral</option>
+                                <option value="gemma2">Gemma 2</option>
+                                <option value="qwen2.5-coder">Qwen 2.5 Coder</option>
+                                <option value="phi3">Phi-3</option>
+                                <option value="deepseek-coder-v2">DeepSeek Coder V2</option>
                             </optgroup>
                         </select>
+                        <button id="btn-refresh-local-models" class="icon-only-btn" title="Scan for Local Models" 
+                            style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; margin-right: 5px;"
+                            onclick="updateLocalAIStatus();">🔄</button>
                         <button class="btn-focus" title="Focus Mode">⤢</button>
                         <button class="btn-regen" title="Regenerate Last Prompt">✨</button>
                         <button class="btn-copy-response" title="Copy Response">📋</button>
@@ -341,7 +442,7 @@
                 <div id="api-chat-container"
                     style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-dark);">
                     <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 20px;">
-                        <p>Welcome to Aura Pro API Mode 🚀</p>
+                        <p>Welcome to Aura Local AI Mode 🏠</p>
                         <p>Messages sent while this panel is active will appear here instantly.</p>
                     </div>
                 </div>
@@ -366,252 +467,12 @@
                         <button class="btn-close-panel" title="Close">✕</button>
                     </div>
                 </div>
-                <webview id="wv-custom" src="about:blank" partition="persist:custom" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" allowpopups></webview>
+                <webview id="wv-custom" data-src="about:blank" partition="persist:custom" allowpopups></webview>
             </div>
         </div>
     </main>
-
-    <!-- Settings Overlay / 設定 (Settei) - การตั้งค่า -->
-    <div id="settings-overlay" class="overlay hidden">
-        <div class="settings-modal">
-            <header>
-                <h2>⚙️ Aura AI Settings</h2>
-                <button id="btn-close-settings">✕</button>
-            </header>
-
-            <div class="settings-content">
-                <!-- Profile Section -->
-                <section>
-                    <h3>👤 Profile</h3>
-                    <div class="setting-item">
-                        <label>Display Username</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="set-username" placeholder="Choose a username..."
-                                style="flex-grow: 1;">
-                            <button id="btn-update-username"
-                                style="background: var(--accent); border: none; padding: 5px 10px; border-radius: 5px; color: white; cursor: pointer; font-size: 0.8rem;">Update</button>
-                        </div>
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*Used for login
-                            (Email or Username).</p>
-                    </div>
-                    <div class="setting-item" style="margin-top: 15px;">
-                        <label>Community Alias (Optional)</label>
-                        <input type="text" id="set-alias" placeholder="e.g. Secret Master, Anonymous..."
-                            style="width: 100%;">
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">*This name will be
-                            shown on your shared prompts and add-ons.</p>
-                    </div>
-                </section>
-
-                <!-- AI Visibility Control -->
-                <section>
-                    <h3>🤖 UI Layout: Toggle AI Panels</h3>
-                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 10px; margin-top: -5px;">
-                        Select which AI panels you want visible in this workspace.</p>
-                    <div class="checkbox-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <label><input type="checkbox" id="set-show-gemini" checked> Gemini</label>
-                        <label><input type="checkbox" id="set-show-chatgpt" checked> ChatGPT</label>
-                        <label><input type="checkbox" id="set-show-claude" checked> Claude</label>
-                        <label><input type="checkbox" id="set-show-deepseek" checked> DeepSeek</label>
-                        <label><input type="checkbox" id="set-show-leonardo" checked> Leonardo AI</label>
-                    </div>
-                </section>
-
-                <!-- OpenRouter (Pro Mode) -->
-                <section
-                    style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); padding: 10px; border-radius: 8px;">
-                    <h3 style="color: #fbbf24;">🌟 Aura AI Pro (API Mode)</h3>
-                    <div class="setting-item">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <label>OpenRouter API Key</label>
-                            <a href="https://openrouter.ai/keys" target="_blank"
-                                style="font-size: 0.8rem; color: #fbbf24; text-decoration: none; display: flex; align-items: center; gap: 4px;"
-                                title="Get your API key">🔑 Get API Key ↗</a>
-                        </div>
-                        <input type="password" id="set-openrouter-key" placeholder="sk-or-v1-..." style="width: 100%;">
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 5px;">*Enable API mode
-                            for AI Debate, Workflow Chain, and Compare features.</p>
-                    </div>
-                    <div class="setting-item" style="margin-top: 10px;">
-                        <label><input type="checkbox" id="set-use-api-mode"> Enable Pro Mode (Use API instead of
-                            Webview)</label>
-                    </div>
-                </section>
-
-                <!-- Prompt Logic -->
-                <section>
-                    <h3>📝 Prompt Tweaks</h3>
-                    <div class="setting-item">
-                        <label><input type="checkbox" id="set-use-prefix"> Use Prefix</label>
-                        <input type="text" id="set-prefix-val" placeholder="I am studying {}...">
-                    </div>
-                    <div class="setting-item">
-                        <label><input type="checkbox" id="set-use-suffix" checked> Use Translation Suffix</label>
-                        <input type="text" id="set-suffix-val" placeholder="Please explain in Thai.">
-                    </div>
-                </section>
-
-                <!-- Automation -->
-                <section>
-                    <h3>⚡ Automation</h3>
-                    <div class="checkbox-group">
-                        <label><input type="checkbox" id="set-auto-send"> Auto-click Search/Send</label>
-                        <label><input type="checkbox" id="set-auto-read"> Auto-read aloud (for ChatGPT only)</label>
-                    </div>
-                </section>
-
-                <!-- System -->
-                <section>
-                    <h3>📂 System</h3>
-                    <div class="checkbox-group">
-                        <label><em>Add-on visibility is now managed exclusively in the <b>Store</b>.</em></label>
-                    </div>
-                </section>
-
-                <!-- Updates -->
-                <section>
-                    <h3>⬆️ Updates</h3>
-                    <div class="setting-item" style="display: flex; align-items: center; gap: 10px;">
-                        <button id="btn-check-updates" style="background: var(--accent); border: none; padding: 8px 14px; border-radius: 6px; color: white; cursor: pointer; font-size: 0.9rem;">Check for Updates</button>
-                        <span id="current-version" style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">v1.1.9</span>
-                    </div>
-                    <div id="update-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 6px; min-height: 1.2em;"></div>
-                    <p style="font-size: 0.7rem; color: rgba(255,255,255,0.5);">Update is checked automatically when the app starts.</p>
-                </section>
-
-                <!-- Custom AI -->
-                <section>
-                    <h3>✨ Custom AI View</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <label><input type="checkbox" id="set-show-custom"> Enable Custom AI View</label>
-                        <div class="setting-item">
-                            <label>Name</label>
-                            <input type="text" id="set-custom-name" placeholder="e.g. Perplexity">
-                        </div>
-                        <div class="setting-item">
-                            <label>URL</label>
-                            <input type="text" id="set-custom-url" placeholder="https://example.com">
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Keyboard Shortcuts Reference -->
-                <section>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0;">⌨️ Customize Shortcuts</h3>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <button id="btn-reset-shortcuts" title="Reset to Defaults" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s;">
-                                🔄 Reset Defaults
-                            </button>
-                            <label class="switch" style="scale: 0.8;">
-                                <input type="checkbox" id="set-shortcuts-enabled" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div id="shortcuts-config-list" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid var(--glass-border); font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
-                        <!-- Shortcut Items -->
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <!-- Send Prompt -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-send" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Send Prompt (Hub)</label>
-                                </div>
-                                <input type="text" id="set-shortcut-send" placeholder="Ctrl+H" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <!-- Broadcast -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-broadcast" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Broadcast (All Panels)</label>
-                                </div>
-                                <input type="text" id="set-shortcut-broadcast" placeholder="Ctrl+Shift+H" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <!-- Sidebar -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-sidebar" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Toggle Sidebar</label>
-                                </div>
-                                <input type="text" id="set-shortcut-sidebar" placeholder="Ctrl+G" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-
-                            <!-- Global Show/Hide -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-global" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Global Show/Hide</label>
-                                </div>
-                                <input type="text" id="set-shortcut-global" placeholder="Alt+Space" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-
-                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;">
-
-                            <!-- Auto Send Toggle -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                                <label style="color: var(--accent); font-weight: bold; font-size: 0.8rem;">⚡ Auto-Send Prompt (Enter Only)</label>
-                                <label class="switch" style="scale: 0.7;">
-                                    <input type="checkbox" id="set-shortcut-auto-send">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-
-                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;">
-                            <span style="color: var(--accent); font-weight: bold; font-size: 0.75rem;">Prompt Hotkeys (1-5)</span>
-
-                            <!-- Prompt 1-5 -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-p1" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Prompt 1</label>
-                                </div>
-                                <input type="text" id="set-shortcut-p1" placeholder="Alt+1" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-p2" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Prompt 2</label>
-                                </div>
-                                <input type="text" id="set-shortcut-p2" placeholder="Alt+2" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-p3" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Prompt 3</label>
-                                </div>
-                                <input type="text" id="set-shortcut-p3" placeholder="Alt+3" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-p4" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Prompt 4</label>
-                                </div>
-                                <input type="text" id="set-shortcut-p4" placeholder="Alt+4" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="chk-shortcut-p5" checked>
-                                    <label style="color: rgba(255,255,255,0.6); margin: 0;">Prompt 5</label>
-                                </div>
-                                <input type="text" id="set-shortcut-p5" placeholder="Alt+5" style="width: 100px; text-align: center; background: #444; border: 1px solid #666; border-radius: 4px; color: white;">
-                            </div>
-                        </div>
-
-                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 15px; line-height: 1.4;">
-                            * Use "Ctrl", "Alt", "Shift", "Cmd". Ex: "Alt+1" or "Cmd+H".<br>
-                            * Uncheck to disable a specific shortcut.
-                        </p>
-                    </div>
-                </section>
-            </div>
-
-            <footer>
-                <button id="btn-save-settings">💾 Save Changes</button>
-            </footer>
-        </div>
     </div>
+
 
     <!-- Overlay: Add/Edit Prompt -->
     <div id="prompt-overlay" class="overlay hidden" style="z-index: 10001;">
@@ -650,88 +511,426 @@
         </div>
     </div>
 
-    <!-- Store Overlay: Add-on Store -->
+    <!-- Add-on Manager Overlay (Aura AI 3.0 Platform Store) -->
     <div id="store-overlay" class="overlay flex-center hidden" style="z-index: 10002;">
-        <div class="settings-modal" style="width: 500px;">
+        <div class="settings-modal modal-content glass-card" style="width: 580px; max-height: 85vh; overflow-y: auto;">
             <header>
-                <h2>🛒 Add-on Store</h2>
-                <button id="btn-close-store"
-                    style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+                <h2>🧩 Add-on Manager</h2>
+                <button id="btn-close-store" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
             </header>
 
-            <div class="settings-content" style="padding: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <p style="margin: 0; color:rgba(255,255,255,0.7);">Expand your AI capabilities with add-ons.</p>
-                    <button id="btn-open-create-addon"
-                        style="background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">✨
-                        Create Add-on</button>
+            <div class="settings-content" style="padding: 24px;">
+                <p style="margin: 0 0 24px 0; color:var(--text-secondary); font-size: 0.95rem;">
+                    "Enhance your workspace with professional-grade AI tools."
+                </p>
+
+                <!-- Featured: Translate Overlay -->
+                <div class="store-card featured-card" style="background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--accent-rgb), 0.05)); border: 1px solid var(--border-hover); padding: 24px; border-radius: var(--radius-lg); margin-bottom: 24px; position: relative; transition: 0.3s; cursor: default;">
+                    <div style="position: absolute; top: 12px; right: 16px; font-size: 0.65rem; background: var(--accent); color: white; padding: 2px 10px; border-radius: 99px; font-weight: 800; letter-spacing: 0.5px;">⭐ POPULAR</div>
+                    <div style="display: flex; gap: 20px; align-items: flex-start;">
+                        <div style="font-size: 3rem;">🌐</div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 6px 0; font-family: 'Outfit'; font-size: 1.3rem;">Translate anything on screen instantly</h3>
+                            <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">แปลและวิเคราะห์ทุกอย่างบนหน้าจอทันที (Alt+Q)</p>
+                            <ul style="margin: 16px 0; padding: 0 0 0 20px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
+                                <li>✨ Real-time OCR Engine</li>
+                                <li>🧠 AI Context Awareness (Game/Movie)</li>
+                                <li>📚 Smart Vocabulary & Word Memory</li>
+                            </ul>
+                            <button class="btn-addon-toggle" data-addon="translateOverlay" style="background: var(--accent); color: white; border: none; padding: 12px; border-radius: var(--radius-md); cursor: pointer; font-weight: 800; width: 100%; font-size: 0.95rem; transition: 0.2s;">
+                                [Status]
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <h4
-                    style="margin: 0 0 10px 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">
-                    Official Add-ons</h4>
-                <!-- Store Item 1 -->
-                <div class="store-item"
-                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="margin: 0 0 5px 0;">🛒 E-commerce Pro</h3>
-                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with
-                            Leonardo AI and prompts for product descriptions.</p>
+                <!-- Performance: Local AI -->
+                <div class="store-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-lg); margin-bottom: 24px; transition: 0.3s;">
+                    <div style="display: flex; gap: 18px; align-items: flex-start;">
+                        <div style="font-size: 2.22rem;">⚡</div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 6px 0; font-family: 'Outfit';">Run AI locally, faster & private</h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">ประมวลผลบนเครื่อง (Ollama) เพื่อความเป็นส่วนตัวสูงสุด</p>
+                            <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">🔒 100% Private • 🚀 Zero Latency</span>
+                                <button class="btn-addon-toggle" data-addon="localAI" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border); padding: 8px 18px; border-radius: var(--radius-md); cursor: pointer; font-weight: 700; transition: 0.2s;">
+                                    [Status]
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button class="store-btn-install" data-addon="ecommerce"
-                        style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
                 </div>
 
-                <!-- Store Item 2 -->
-                <div class="store-item"
-                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="margin: 0 0 5px 0;">⛩️ Japanese Tutor</h3>
-                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with
-                            Claude and prompts for language learning.</p>
+                <!-- Productivity: Pro OCR Engine -->
+                <div class="store-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-lg); margin-bottom: 24px; transition: 0.3s;">
+                    <div style="display: flex; gap: 18px; align-items: flex-start;">
+                        <div style="font-size: 2.22rem;">📸</div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 6px 0; font-family: 'Outfit';">High-accuracy text capture</h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">ระบบอ่านตัวอักษรความแม่นยำสูง (Native Engine)</p>
+                            <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">🏎️ Rapid Capture • 🎯 Pixel Perfect</span>
+                                <button class="btn-addon-toggle" data-addon="ocrEngine" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border); padding: 8px 18px; border-radius: var(--radius-md); cursor: pointer; font-weight: 700; transition: 0.2s;">
+                                    [Status]
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button class="store-btn-install" data-addon="japanese"
-                        style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
                 </div>
 
-                <!-- Store Item 3 -->
-                <div class="store-item"
-                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="margin: 0 0 5px 0;">🎨 Graphic Design Pro</h3>
-                        <p style="margin: 0; font-size: 0.85rem; color: rgba(255,255,255,0.6);">Specialized layout with Pinterest inspiration, Leonardo AI, and design prompts.</p>
-                    </div>
-                    <button class="store-btn-install" data-addon="graphic-design"
-                        style="background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Install</button>
-                </div>
-
-                <div style="margin-top: 30px;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4
-                            style="margin: 0; color: rgba(255,255,255,0.4); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">
-                            🌍 Community Add-ons</h4>
-                        <input type="text" id="search-community-addons" placeholder="🔍 Search add-ons..."
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px 10px; border-radius: 5px; color: white; font-size: 0.75rem; width: 150px;">
-                    </div>
-                    <div id="community-addon-list" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div
-                            style="text-align: center; color: rgba(255,255,255,0.3); padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
-                            Loading community add-ons...
+                <div style="margin-top: 32px; border-top: 1px solid var(--border); padding-top: 24px;">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1.5px; font-weight: 800;">🌍 Community Discoveries</h4>
+                    <div id="community-addon-list" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="text-align: center; color: var(--text-muted); padding: 32px; border: 2px dashed var(--border); border-radius: var(--radius-lg); font-size: 0.85rem; opacity: 0.6;">
+                            Coming Soon: Browse and share custom AI modules.
                         </div>
                     </div>
                 </div>
             </div>
 
-            <footer style="display: flex; justify-content: flex-end;">
-                <button id="btn-done-store"
-                    style="background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Done</button>
+            <footer style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 16px 24px; border-top: 1px solid var(--border);">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Aura AI v3.0 | Secure Workspace</span>
+                <button id="btn-done-store" style="background: var(--accent); color: white; border: none; padding: 12px 32px; border-radius: var(--radius-md); font-weight: 800; cursor: pointer; transition: 0.2s;">Done</button>
             </footer>
         </div>
     </div>
 
-    <!-- Community Prompts Overlay -->
-    <div id="community-overlay" class="overlay flex-center hidden" style="z-index: 10002;">
+    <!-- Unified Settings Overlay (Professional Tabbed View) -->
+    <div id="settings-overlay" class="overlay hidden">
+        <div class="settings-modal pro-settings">
+            <div class="settings-header-banner">
+                <div class="banner-overlay"></div>
+                <div class="banner-content">
+                    <h2 style="margin:0; font-family: 'Outfit', sans-serif; letter-spacing: 2px;">AURA AI CORE</h2>
+                    <p style="margin:0; font-size: 0.7rem; opacity: 0.7;">PROFESSIONAL WORKSPACE ENGINE</p>
+                </div>
+                <button id="btn-close-settings" class="close-overlay">✕</button>
+            </div>
+
+            <div class="settings-tabs-nav">
+                <button class="tab-btn active" data-tab="tab-always">Always</button>
+                <button class="tab-btn" data-tab="tab-prompts">Prompts</button>
+                <button class="tab-btn" data-tab="tab-tags">Tags</button>
+                <button class="tab-btn" data-tab="tab-shortcuts">Shortcuts</button>
+                <button class="tab-btn" data-tab="tab-fields">Fields</button>
+                <button class="tab-btn" data-tab="tab-exclude">Exclude</button>
+                <button class="tab-btn" data-tab="tab-other">Other</button>
+                <button class="tab-btn" data-tab="tab-log">Log</button>
+                <button class="tab-btn" data-tab="tab-credit">Credit</button>
+                <button class="tab-btn" data-tab="tab-addons">Add-ons</button>
+            </div>
+
+            <div class="settings-tab-content">
+                <!-- Always Tab -->
+                <div id="tab-always" class="tab-pane active">
+                    <div class="settings-group">
+                        <h3>[ AI Selection ] <span class="help-hint">?</span></h3>
+                        <div class="checkbox-grid">
+                            <label class="pro-check"><input type="checkbox" id="set-show-chatgpt"> ChatGPT</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-gemini"> Gemini</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-claude"> Claude</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-perplexity"> Perplexity</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-bing"> Bing Chat</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-deepseek"> DeepSeek</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-grok"> Grok AI</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-duck"> Duck AI</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-leonardo"> Leonardo AI</label>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>[ Custom AI ] <span class="help-hint">?</span></h3>
+                        <label class="pro-check"><input type="checkbox" id="set-show-custom"> Enable Custom AI URL (Need restart option)</label>
+                        <div class="input-row">
+                            <span>CustomAiUrl</span>
+                            <input type="text" id="set-custom-url" placeholder="https://your-ai-url.com">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>[ Local AI Server ] <span class="help-hint" title="Use a local AI engine like Ollama to run models entirely on your machine.">?</span></h3>
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.75rem; color: rgba(255,255,255,0.85); line-height: 1.4;">
+                            <strong style="color: white;">🏡 100% Free & Private AI</strong><br><br>
+                            <span style="color: #10b981; font-weight: bold;">• Requirements:</span> You must install <a href="https://ollama.com/" target="_blank" style="color: #38bdf8; text-decoration: none;">Ollama</a> or <a href="https://lmstudio.ai/" target="_blank" style="color: #38bdf8; text-decoration: none;">LM Studio</a>.<br>
+                            <span style="color: #94a3b8; font-weight: bold;">• Endpoint:</span> Ollama (Port 11434) / LM Studio (Port 1234).<br><br>
+                            
+                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+                                <button type="button" id="btn-settings-install-ai" class="save-btn" style="flex: 1; padding: 6px; font-size: 0.7rem; background: #10b981; border: none; font-weight: 700;">🚀 Install AI (Llama 3.2)</button>
+                                <button type="button" id="btn-settings-check-local" class="save-btn" style="flex: 0.5; padding: 6px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);">🔍 Check Status</button>
+                            </div>
+                        </div>
+                        <label class="pro-check"><input type="checkbox" id="set-use-api-mode"> Enable Local AI Mode</label>
+                        <label class="pro-check"><input type="checkbox" id="set-scan-mode"> Enable Scan Mode (Auto-Hover Translate)</label>
+                        <div class="input-row" style="position: relative;">
+                            <span>Endpoint URL</span>
+                            <div style="display: flex; gap: 5px; flex: 1;">
+                                <input type="text" id="set-openrouter-key" placeholder="http://127.0.0.1:11434" readonly style="background: rgba(0,0,0,0.2); cursor: not-allowed; opacity: 0.8;">
+                                <button type="button" id="btn-edit-endpoint" class="icon-only-btn" style="padding: 5px 8px; font-size: 0.75rem;" title="Edit Endpoint (Advanced Users Only)">✏️</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prompts Tab -->
+                <div id="tab-prompts" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Prompt Templates ] {} <span class="help-hint">?</span></h3>
+                        <div id="prompt-templates-list" class="prompt-grid-pro">
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="default" id="p-label-1">
+                                <input type="text" class="p-content" placeholder="what is {}? Please tell me in detail." id="p-content-1">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="more" id="p-label-2">
+                                <input type="text" class="p-content" placeholder="Please explain more about {}." id="p-content-2">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 3" id="p-label-3">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-3">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 4" id="p-label-4">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-4">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 5" id="p-label-5">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-5">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 6" id="p-label-6">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-6">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 7" id="p-label-7">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-7">
+                            </div>
+                            <div class="prompt-row">
+                                <input type="text" class="p-label" placeholder="slot 8" id="p-label-8">
+                                <input type="text" class="p-content" placeholder="Enter prompt text here..." id="p-content-8">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button id="btn-reset-prompts" class="icon-only-btn" style="padding: 5px 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 6px; font-size: 0.8rem;">🔄 Reset to Defaults</button>
+                    </div>
+                </div>
+
+                <!-- Tags Tab -->
+                <div id="tab-tags" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Study Content from Tags ] <span class="help-hint">?</span></h3>
+                        <label class="pro-check"><input type="checkbox" id="set-use-prefix"> Use Prefix</label>
+                        <div class="input-row">
+                            <span>Prefix {}</span>
+                            <input type="text" id="set-prefix-val" placeholder="I am studying {}.">
+                        </div>
+                        <label class="pro-check"><input type="checkbox" id="set-use-suffix"> Use Suffix</label>
+                        <div class="input-row">
+                            <span>Suffix</span>
+                            <input type="text" id="set-suffix-val" placeholder=" Please explain in Thai.">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-shortcuts" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Global Shortcuts ] <label class="pro-check" style="display:inline; margin-left:10px;"><input type="checkbox" id="set-shortcuts-enabled"> Enabled</label></h3>
+                        <div class="shortcut-grid">
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-send"> Send Prompt</label>
+                                <input type="text" id="set-shortcut-send" placeholder="Ctrl+H">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-broadcast"> Broadcast</label>
+                                <input type="text" id="set-shortcut-broadcast" placeholder="Ctrl+Shift+H">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-sidebar"> Toggle Sidebar</label>
+                                <input type="text" id="set-shortcut-sidebar" placeholder="Ctrl+G">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-global"> Global Focus</label>
+                                <input type="text" id="set-shortcut-global" placeholder="Alt+Space">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <h3>[ Prompt Shortcuts ] (Alt + 1-5)</h3>
+                        <div class="shortcut-grid">
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-p1"> Prompt 1</label>
+                                <input type="text" id="set-shortcut-p1" placeholder="Alt+1">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-p2"> Prompt 2</label>
+                                <input type="text" id="set-shortcut-p2" placeholder="Alt+2">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-p3"> Prompt 3</label>
+                                <input type="text" id="set-shortcut-p3" placeholder="Alt+3">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-p4"> Prompt 4</label>
+                                <input type="text" id="set-shortcut-p4" placeholder="Alt+4">
+                            </div>
+                            <div class="shortcut-item">
+                                <label><input type="checkbox" id="chk-shortcut-p5"> Prompt 5</label>
+                                <input type="text" id="set-shortcut-p5" placeholder="Alt+5">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <h3>[ Local AI Runner ] <span class="help-hint">?</span></h3>
+                        <p style="font-size: 0.75rem; margin-bottom: 10px; opacity: 0.8; color: #10b981;">
+                            Power your local models using Ollama, LM Studio, or any OpenAI-compatible runner.
+                        </p>
+                        <button id="btn-reset-shortcuts" class="icon-only-btn" style="padding: 5px 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 6px; font-size: 0.8rem;">🔄 Reset to Defaults</button>
+                    </div>
+                </div>
+
+                <div id="tab-fields" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Custom Keyword Mapping ] <span class="help-hint">?</span></h3>
+                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 15px;">Define custom labels for [YOUR TOPIC] style placeholders.</p>
+                        <div class="input-row">
+                            <span>Topic Label</span>
+                            <input type="text" id="set-label-topic" placeholder="[YOUR TOPIC]">
+                        </div>
+                        <div class="input-row">
+                            <span>Product Label</span>
+                            <input type="text" id="set-label-product" placeholder="[YOUR PRODUCT]">
+                        </div>
+                        <div class="input-row">
+                            <span>Text Label</span>
+                            <input type="text" id="set-label-text" placeholder="[YOUR TEXT]">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-exclude" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ AI Broadcasting Exclusion ]</h3>
+                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 15px;">Choose which AIs to skip during 'Global Broadcast'.</p>
+                        <div class="checkbox-grid">
+                            <label class="pro-check"><input type="checkbox" id="ex-chatgpt"> Exclude ChatGPT</label>
+                            <label class="pro-check"><input type="checkbox" id="ex-gemini"> Exclude Gemini</label>
+                            <label class="pro-check"><input type="checkbox" id="ex-claude"> Exclude Claude</label>
+                            <label class="pro-check"><input type="checkbox" id="ex-leonardo"> Exclude Leonardo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Tab -->
+                <div id="tab-other" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Sidebar ] <span class="help-hint">?</span></h3>
+                        <label class="pro-check"><input type="checkbox" id="set-auto-open-sidebar" checked> Auto open sidebar when start Aura</label>
+                        <label class="pro-check"><input type="checkbox" id="set-auto-hide-sidebar"> auto hide sidebar on review questions</label>
+                        <label class="pro-check"><input type="checkbox" id="set-add-ai-icon-top" checked> add Ai icon button to the top toolbar</label>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>[ Auto Prompt ] <span class="help-hint">?</span></h3>
+                        <label class="pro-check"><input type="checkbox" id="set-auto-send"> auto send prompts</label>
+                        <label class="pro-check"><input type="checkbox" id="set-auto-input-only"> Auto input text but do not auto send</label>
+                        <label class="pro-check"><input type="checkbox" id="set-auto-read"> Auto-read aloud (for ChatGPT only)</label>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>[ Shortcut_Key ] <span class="help-hint">?</span></h3>
+                        <div class="input-row">
+                            <span>Send Prompt</span>
+                            <input type="text" id="set-shortcut-send" readonly placeholder="Ctrl+H">
+                        </div>
+                        <div class="input-row">
+                            <span>Open Sidebar</span>
+                            <input type="text" id="set-shortcut-sidebar" readonly placeholder="Ctrl+G">
+                        </div>
+                        <div class="input-row">
+                            <span>Aura Assistant</span>
+                            <input type="text" id="set-shortcut-lookupper" readonly placeholder="Alt+Q">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                        <h3>[ Troubleshooting ]</h3>
+                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 12px;">If UI elements look strange or you want to see the guided tour again.</p>
+                        <button id="btn-reset-onboarding" style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s;">🔄 Reset Guided Tour</button>
+                    </div>
+                </div>
+
+                <!-- Log Tab -->
+                <div id="tab-log" class="tab-pane">
+                    <div class="settings-group log-view">
+                        <h3>[ Change log ]</h3>
+                        <pre id="changelog-text">
+2026-03-21
+[1] Creative Suite Overhaul
+- Added Bing, Perplexity, Grok, and Duck AI.
+- New Tabbed Professional Settings UI.
+- Improved Global Subject sync with legacy support.
+- Quick Export to Clipboard for all panels.
+- Restored missing shortcuts and settings tabs.
+
+2026-03-20
+[1] Phase 4 Final
+- Added Customizable Toolbars.
+- Implementation of Global Subject.
+                        </pre>
+                    </div>
+                </div>
+
+                <div id="tab-credit" class="tab-pane">
+                    <div class="settings-group credit-view" style="text-align: center; padding: 20px;">
+                        <h2 style="margin: 0;">AURA AI Professional</h2>
+                        <p id="current-version-display" style="color: var(--accent); font-weight: 600;">v1.0.8</p>
+                        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                        <p style="font-size: 0.9rem;">The Ultimate AI Multi-Workspace Engine</p>
+                        <p style="font-size: 0.8rem; opacity: 0.6;">Created with ❤️ by the Aura Dev Team</p>
+                        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 15px;">
+                            <a href="#" style="color: var(--accent); text-decoration: none;">GitHub</a>
+                            <a href="#" style="color: var(--accent); text-decoration: none;">Discord</a>
+                            <a href="#" style="color: var(--accent); text-decoration: none;">Website</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-addons" class="tab-pane">
+                    <div class="settings-group">
+                        <h3>[ Installed Add-ons & Modes ]</h3>
+                        <div class="checkbox-grid">
+                            <label class="pro-check"><input type="checkbox" id="set-show-ecommerce"> E-commerce Pro</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-japanese"> Japanese Tutor</label>
+                            <label class="pro-check"><input type="checkbox" id="set-show-graphic-design"> Graphic Design Pro</label>
+                        </div>
+                    </div>
+
+                    <div class="settings-group" style="margin-top: 20px;">
+                        <label>📖 Aura Assistant (Notion)</label>
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                            <input type="password" id="set-notion-api-key" placeholder="Enter Notion API Key">
+                            <input type="text" id="set-notion-db-id" placeholder="Enter Notion Database ID">
+                            <label class="pro-check"><input type="checkbox" id="set-lookupper-privacy" checked> Show source image snippet in bubble</label>
+                            <label class="pro-check"><input type="checkbox" id="set-lookupper-autospeak"> Auto-speak translation result</label>
+                            <small style="opacity: 0.6; font-size: 0.7rem;">Used for "Save to Note" feature.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-footer">
+                <button id="btn-save-settings" class="pro-btn-primary">OK</button>
+                <button id="btn-cancel-settings" class="pro-btn-secondary">Cancel</button>
+                <div class="footer-buttons-extra">
+                    <button class="footer-extra-btn">💖 Become a patron</button>
+                    <button class="footer-extra-btn">👍 RateThis</button>
+                    <button class="footer-extra-btn">? Wiki</button>
+                    <button class="footer-extra-btn">🚨 Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+   <div id="community-overlay" class="overlay flex-center hidden" style="z-index: 10002;">
         <div class="settings-modal" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
             <header>
                 <h2>🌍 Community Prompts</h2>
@@ -809,11 +1008,11 @@
                 </div>
                 <div class="auth-input-group">
                     <label id="email-label">Email or Username</label>
-                    <input type="text" id="auth-email" placeholder="you@example.com or username" required>
+                    <input type="text" id="auth-email" placeholder="you@example.com or username">
                 </div>
                 <div class="auth-input-group">
                     <label>Password</label>
-                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                    <input type="password" id="auth-password" placeholder="••••••••">
                 </div>
 
                 <div style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
@@ -924,7 +1123,10 @@
         <div class="modal-content" style="max-width: 400px; padding: 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);">
             <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="margin: 0; font-size: 1.2rem;">📍 Manage Shortcuts</h2>
-                <button id="btn-close-link-manager" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">✕</button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="btn-add-new-link" title="Add New Shortcut" style="background: var(--accent); border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s;">➕ Add Shortcut</button>
+                    <button id="btn-close-link-manager" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">✕</button>
+                </div>
             </header>
             <div id="link-manager-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
                 <!-- Shortcut items injected here -->
@@ -937,6 +1139,106 @@
             </div>
         </div>
     </div>
+
+    <!-- Notifications -->
+    <!-- Aura Lookupper Floating Bubble -->
+    <div id="lookupper-bubble" class="hidden">
+        <div class="bubble-header" style="-webkit-app-region: drag;">
+            <span>✨ Aura Assistant</span>
+            <button id="btn-close-bubble">×</button>
+        </div>
+        <div id="bubble-source-container" class="hidden" style="padding: 5px; background: rgba(0,0,0,0.2); text-align: center;">
+            <img id="bubble-source-snippet" style="max-height: 80px; max-width: 100%; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+        </div>
+        <div id="bubble-content">
+            <div class="loader-wave" style="display:none;">
+                <span></span><span></span><span></span>
+            </div>
+            <div id="bubble-inner-content">
+                <div id="bubble-confidence-dot" class="confidence-dot" title="OCR Confidence"></div>
+                <div id="bubble-text-content"></div>
+            </div>
+        </div>
+        <div class="bubble-actions">
+            <button id="btn-bubble-tts" title="Speak">🔊</button>
+            <button id="btn-bubble-notion" title="Save to Notion">📓</button>
+        </div>
+    </div>
+
+    <!-- Aura Home: Platform Onboarding (Aura AI 3.0) -->
+    <div id="modal-aura-home" class="modal-overlay hidden">
+        <div class="modal-content glass-card onboarding-card" style="padding: 48px; max-width: 520px;">
+            <div class="onboarding-icon" style="font-size: 5rem; line-height: 1; margin-bottom: 32px;">✨</div>
+            <h2 class="onboarding-title" style="font-size: 2.2rem; margin-bottom: 8px;">Start your intelligent workspace</h2>
+            <p class="onboarding-desc" style="font-size: 1rem; opacity: 0.7; margin-bottom: 32px;">Powered by AI. Ready instantly.</p>
+            
+            <div class="recommended-box glass-card" style="padding: 32px; border: 1px solid var(--border-hover); background: rgba(var(--accent-rgb), 0.05); margin-bottom: 32px; position: relative; border-radius: var(--radius-lg);">
+                <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 4px 16px; border-radius: 99px; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px;">⭐ RECOMMENDED</div>
+                <div class="onboarding-benefits" style="text-align: left; margin: 0;">
+                    <div class="benefit-item" style="margin-bottom: 16px;">🧠 <span><b>AI Hub</b>: รวม AI ทั่วโลก (GPT, Claude, Gemini)</span></div>
+                    <div class="benefit-item">🌐 <span><b>Translate Overlay</b>: แปลทุกอย่างทันที (Alt+Q)</span></div>
+                </div>
+            </div>
+
+            <div class="onboarding-actions" style="display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%;">
+                <button id="btn-onboarding-recommended" class="btn-primary-glow" style="width: 100%; height: 56px; font-size: 1.1rem; border-radius: var(--radius-md);">Continue</button>
+                <button id="btn-onboarding-customize" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: underline; transition: 0.2s;" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)'">Customize features</button>
+            </div>
+            
+            <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 32px; opacity: 0.5;">
+                "One click to setup. You can adjust anything later in the Add-on Manager."
+            </p>
+        </div>
+    </div>
+
+    <!-- Local AI Setup Container (Moved from main onboarding to its own state) -->
+    <div id="modal-local-ai-setup" class="modal-overlay hidden">
+        <div class="modal-content glass-card onboarding-card">
+            <div class="onboarding-icon">⚡</div>
+            <h2 class="onboarding-title">Performance Upgrade</h2>
+            <p class="onboarding-desc">เปิดใช้งาน Local AI เพื่อความเป็นส่วนตัวและความเร็วสูงสุด</p>
+            
+            <div id="setup-progress-container" class="hidden" style="margin-top: 20px;">
+                <div class="progress-info">
+                    <span id="setup-progress-text">กำลังโหลด AI (~2GB)...</span>
+                    <span id="setup-progress-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="setup-progress-bar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="onboarding-actions" id="onboarding-initial-actions">
+                <button id="btn-install-local-ai" class="btn-primary-glow">✅ ติดตั้ง AI (Ollama)</button>
+                <button onclick="document.getElementById('modal-local-ai-setup').classList.add('hidden')" class="btn-secondary"> ไว้ทีหลัง</button>
+            </div>
+
+            <div id="onboarding-success-msg" class="hidden">
+                <p style="color: #10b981; font-weight: 700;">✅ ติดตั้งเรียบร้อย! พร้อมใช้งานแล้ว</p>
+                <button onclick="document.getElementById('modal-local-ai-setup').classList.add('hidden')" class="btn-primary-glow" style="margin-top: 15px;">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette (Ctrl+K): Pro Navigation Add-on -->
+    <div id="command-palette-overlay" class="modal-overlay hidden">
+        <div class="command-palette-card glass-card">
+            <div class="cp-search-area">
+                <span class="cp-icon">⌨️</span>
+                <input type="text" id="command-palette-input" placeholder="Type a command or search add-ons..." autocomplete="off">
+            </div>
+            <div id="command-palette-results" class="cp-results">
+                <!-- Results injected here -->
+            </div>
+            <div class="cp-footer">
+                <span><kbd>↑↓</kbd> Navigate</span>
+                <span><kbd>↵</kbd> Select</span>
+                <span><kbd>Esc</kbd> Close</span>
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- End App Wrapper -->
 
     <script type="module" src="renderer.js"></script>
 </body>
