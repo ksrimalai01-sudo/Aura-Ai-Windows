@@ -96,6 +96,10 @@
         .fav-btn.active {
             color: #ffcc00;
         }
+        #flow-skill-select:focus {
+            border-color: var(--accent) !important;
+            background: rgba(var(--accent-rgb), 0.1) !important;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +111,7 @@
                     <button id="btn-mode-game" class="mode-btn" title="Game Mode">🎮</button>
                     <button id="btn-mode-movie" class="mode-btn" title="Movie Mode">🎬</button>
                     <button id="btn-mode-tutor" class="mode-btn" title="Tutor Mode">🧠</button>
+                    <button id="btn-mode-flow" class="mode-btn" title="Aura-Flow (Autonomous)">⚡</button>
                 </div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; -webkit-app-region: no-drag;">
@@ -117,6 +122,13 @@
         
         <div id="bubble-source-container" class="hidden" style="padding: 5px; background: rgba(0,0,0,0.2); text-align: center;">
             <img id="bubble-source-snippet" style="max-height: 60px; max-width: 100%; border-radius: 4px; opacity: 0.8;">
+        </div>
+
+        <div id="flow-selector-container" class="hidden" style="padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4);">ACTIVE SKILL:</span>
+            <select id="flow-skill-select" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.7rem; border-radius: 4px; padding: 2px 5px; outline: none; flex: 1;">
+                <option value="none">Standard Assistant</option>
+            </select>
         </div>
 
         <div id="bubble-content">

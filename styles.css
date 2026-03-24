@@ -2590,3 +2590,220 @@ body.creative-suite .view-header {
   filter: brightness(1.2);
   box-shadow: 0 4px 12px var(--accent-glow);
 }
+/* ── 27. CHAT BUBBLES (Aura Local AI Hub) ──────────────────── */
+.chat-bubble {
+  max-width: 85%;
+  padding: 12px 18px;
+  border-radius: var(--radius-lg);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  position: relative;
+  word-wrap: break-word;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.user-bubble {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #000;
+  font-weight: 500;
+  border-bottom-right-radius: 4px;
+}
+
+.assistant-bubble {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 5px 0;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 28. LOCAL AI DASHBOARD (Phase 16) ────────────────────── */
+.local-ai-dashboard {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.dashboard-header-pro {
+  text-align: center;
+  position: relative;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dashboard-header-pro h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.8rem;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+
+.status-heartbeat {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  background: #ef4444; /* Default: Red/Error */
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.status-heartbeat.online {
+  background: #10b981;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+}
+
+.pulsing {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+/* Wizard Stepper */
+.wizard-stepper {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 20px;
+}
+
+.wizard-step {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.step-num {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: black;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4);
+}
+
+.model-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.model-card-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-md);
+  transition: 0.3s;
+}
+
+.model-card-item:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--border-hover);
+}
+
+.wizard-btn-sm {
+  background: var(--accent);
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.wizard-btn-sm:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.btn-delete-model {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+/* ── 29. AI GUIDE MATRIX (Phase 17) ───────────────────────── */
+.ai-guide-container {
+  padding: 30px;
+}
+
+.pro-matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
+}
+
+.pro-matrix th, .pro-matrix td {
+  padding: 18px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.pro-matrix th {
+  background: rgba(255,255,255,0.05);
+  color: var(--accent);
+  font-family: 'Outfit';
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
+.col-local { color: #10b981 !important; font-weight: 700; }
+.col-cloud { color: #8b5cf6 !important; font-weight: 700; }

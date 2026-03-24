@@ -20,8 +20,12 @@ const confDot = document.getElementById('bubble-confidence-dot');
 const modeBtns = {
     game: document.getElementById('btn-mode-game'),
     movie: document.getElementById('btn-mode-movie'),
-    tutor: document.getElementById('btn-mode-tutor')
+    tutor: document.getElementById('btn-mode-tutor'),
+    flow: document.getElementById('btn-mode-flow')
 };
+
+const flowSelectorContainer = document.getElementById('flow-selector-container');
+const flowSkillSelect = document.getElementById('flow-skill-select');
 
 // Mode Switching
 Object.keys(modeBtns).forEach(mode => {
@@ -37,7 +41,35 @@ function updateActiveMode(active) {
     Object.keys(modeBtns).forEach(m => {
         if (modeBtns[m]) modeBtns[m].classList.toggle('active', m === active);
     });
+    
+    // Toggle Flow Selector visibility
+    if (flowSelectorContainer) {
+        flowSelectorContainer.classList.toggle('hidden', active !== 'flow');
+    }
 }
+
+// Populate Skills
+async function initFlowSkills() {
+    try {
+        const skills = await window.electronAPI.listSkills();
+        if (skills && Array.isArray(skills)) {
+            skills.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ');
+                flowSkillSelect.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error("Assistant: Failed to list skills", e);
+    }
+}
+initFlowSkills();
+
+flowSkillSelect.onchange = () => {
+    const skill = flowSkillSelect.value;
+    window.electronAPI.send('toMain', { type: 'assistant-setting', key: 'activeSkill', value: skill });
+};
 
 btnSettings.onclick = () => {
     window.electronAPI.send('toMain', { type: 'assistant-action', action: 'settings' });

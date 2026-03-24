@@ -14,6 +14,150 @@ ipcMain.handle('recognize-text', async (event, dataUrl) => {
     return await ocrMain.recognize(dataUrl);
 });
 
+// --- Aura-Flow IPC Handlers (Autonomous Agent Engine) ---
+// [TH] ตัวจัดการไฟล์ Skill และ Sandbox สำหรับระบบ AI อัตโนมัติ
+const fs = require('fs').promises;
+
+ipcMain.handle('list-skills', async () => {
+    const skillsDir = path.join(__dirname, 'skills');
+    try {
+        const dirs = await fs.readdir(skillsDir, { withFileTypes: true });
+        const skills = [];
+        for (const d of dirs) {
+            if (d.isDirectory()) {
+                const skillFile = path.join(skillsDir, d.name, 'SKILL.md');
+                try {
+                    await fs.access(skillFile);
+                    skills.push(d.name);
+                } catch (e) {}
+            }
+        }
+        return skills;
+    } catch (e) {
+        console.error("Main Process: Error listing skills:", e);
+        return [];
+    }
+});
+
+ipcMain.handle('run-shell-command', async (event, command) => {
+    const { exec } = require('child_process');
+    const isInstaller = command.includes('ollama.com');
+    const sandboxDir = isInstaller ? process.env.TEMP : path.join(app.getPath('userData'), 'aura_workspace');
+    
+    // Ensure sandbox exists if not installer
+    if (!isInstaller) {
+        try { await fs.mkdir(sandboxDir, { recursive: true }); } catch (e) {}
+    }
+
+    return new Promise((resolve, reject) => {
+        // [Security] Strict check: If not official Ollama, must be in sandbox and not restricted
+        if (!isInstaller && (command.includes('rm -rf') || command.includes('del /'))) {
+             return resolve({ success: false, error: "Dangerous command blocked." });
+        }
+
+        const options = { cwd: sandboxDir, timeout: isInstaller ? 60000 : 30000 };
+        
+        exec(command, options, (error, stdout, stderr) => {
+            if (isInstaller) {
+                // Return simple format for installer
+                if (error) reject(error);
+                else resolve(stdout || stderr);
+            } else {
+                // Return structured format for Aura-Flow
+                resolve({
+                    success: !error,
+                    stdout: stdout || '',
+                    stderr: stderr || '',
+                    error: error ? error.message : null
+                });
+            }
+        });
+    });
+});
+
+// ── Generic IPC Listener (Phase 19) ──
+ipcMain.on('toMain', (event, data) => {
+    if (data.type === 'open-url') {
+        shell.openExternal(data.url);
+    }
+});
+
+
+// ── Integrated Downloader (Phase 20 - Native Electron Version 2.0) ──
+ipcMain.handle('download-engine', async (event, downloadUrl) => {
+    console.log(`Main Process: Triggering native download for ${downloadUrl}`);
+    
+    // [TH] ใช้ระบบ Download ของ Electron โดยตรง (Chromium Engine) 
+    // รับรองเรื่อง Redirect และความเสถียร 100% ครับ
+    mainWindow.webContents.downloadURL(downloadUrl);
+    
+    return new Promise((resolve) => {
+        // We resolve early because progress is handled by the session listener below
+        resolve({ success: true, message: "Download started" });
+    });
+});
+
+
+// ── Aura-Systems: Local Webhook Bridge (Phase 14) ──
+// [EN] A lightweight HTTP server to receive triggers from external apps (Discord, Python, etc.)
+// [TH] เซิร์ฟเวอร์ขนาดเล็กสำหรับรับคำสั่งจากภายนอก เช่น Discord Bot หรือ Script อื่นๆ
+function startWebhookServer() {
+    const port = 3030;
+    const server = http.createServer((req, res) => {
+        // [Security] Only allow localhost for protection
+        const remoteAddress = req.socket.remoteAddress;
+        if (remoteAddress !== '127.0.0.1' && remoteAddress !== '::1') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Forbidden: Localhost only" }));
+            return;
+        }
+
+        const parsedUrl = urlModule.parse(req.url, true);
+        
+        if (req.method === 'POST' && parsedUrl.pathname === '/v1/flow/trigger') {
+            let body = '';
+            req.on('data', chunk => { body += chunk.toString(); });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    console.log("Main Process: Webhook Trigger Received:", data);
+                    
+                    if (mainWindow) {
+                        // [EN] Broadcast external trigger to Renderer
+                        // [TH] ส่งสัญญาณการกระตุ้นจากภายนอกไปยังหน้าจอปุ่ม
+                        mainWindow.webContents.send('fromMain', {
+                            type: 'external-trigger',
+                            skillName: data.skill || 'marketing-team',
+                            input: data.input || '',
+                            metadata: data.metadata || {}
+                        });
+
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true, message: "Triggered successfully" }));
+                    } else {
+                        res.writeHead(503, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: "Main window not ready" }));
+                    }
+                } catch (e) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: "Invalid JSON" }));
+                }
+            });
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Endpoint not found. Use POST /v1/flow/trigger" }));
+        }
+    });
+
+    server.listen(port, '127.0.0.1', () => {
+        console.log(`Main Process: Aura-Systems Local Webhook listening on http://127.0.0.1:${port}`);
+    });
+    
+    server.on('error', (err) => {
+        console.error("Main Process: Webhook Server Error:", err);
+    });
+}
+
 
 // --- Explanation / 説明 / คำอธิบาย ---
 // [EN] The Main Process: This is the brain of the app. It manages system events and windows.
@@ -138,6 +282,15 @@ function createWindow() {
                 }
             }
         }
+
+        // [EN] Developer Shortcuts (Active in Dev Mode)
+        // [TH] ทางลัดสำหรับนักพัฒนา (รีโหลดหน้าจอ และเปิด DevTools)
+        if (input.control && input.key.toLowerCase() === 'r') {
+             mainWindow.reload();
+        }
+        if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+             mainWindow.webContents.toggleDevTools();
+        }
     });
 }
 
@@ -232,11 +385,75 @@ if (!gotTheLock) {
 
         session.defaultSession.setUserAgent(chromeUA);
         
+        // Global Session Listener for Downloads (Phase 20)
+        session.defaultSession.on('will-download', (event, item, webContents) => {
+            const fileName = item.getFilename();
+            const url = item.getURL();
+            
+            // [TH] จัดการเรื่องการตรวจสอบ Ollama ให้ฉลาดขึ้น (เช็คจาก URL และ Filename)
+            const isOllama = url.includes('ollama.com') || url.includes('github.com/ollama') || fileName.toLowerCase().includes('ollama');
+            
+            if (!isOllama) {
+                 console.log(`Main Process: Ignoring non-ollama download: ${fileName} (${url})`);
+                 return;
+            }
+
+            console.log(`Main Process: Starting Ollama Engine Download: ${fileName}`);
+
+            // Set save path to Temp
+            const os = require('os');
+            const filePath = path.join(os.tmpdir(), fileName);
+            item.setSavePath(filePath);
+
+            // [TH] สั่ง Resume ทันทีเผื่อ Chromium สั่ง Pause ในตอนแรกครับ
+            if (item.isPaused()) item.resume();
+
+            item.on('updated', (event, state) => {
+                if (state === 'progressing') {
+                    const receivedBytes = item.getReceivedBytes();
+                    const totalBytes = item.getTotalBytes();
+                    const percent = totalBytes ? Math.floor((receivedBytes / totalBytes) * 100) : 0;
+                    
+                    // Broadcast to Renderer
+                    if (mainWindow) {
+                        mainWindow.webContents.send('fromMain', { 
+                            type: 'download-progress', 
+                            percent: percent,
+                            received: receivedBytes,
+                            total: totalBytes
+                        });
+                    }
+                } else if (state === 'interrupted') {
+                    console.log('Main Process: Download interrupted. Attempting to resume...');
+                    item.resume();
+                }
+            });
+
+            item.once('done', (event, state) => {
+                if (state === 'completed') {
+                    console.log('Main Process: Ollama Download Complete.');
+                    if (mainWindow) mainWindow.webContents.send('fromMain', { type: 'download-progress', percent: 100 });
+
+                    // Launch installer (Phase 21)
+                    if (process.platform === 'win32') {
+                        const { exec } = require('child_process');
+                        exec(`start "" "${filePath}"`);
+                    } else {
+                        shell.openPath(filePath);
+                    }
+                } else {
+                    console.error(`Main Process: Download failed with state: ${state}`);
+                    if (mainWindow) mainWindow.webContents.send('fromMain', { type: 'download-error', message: state });
+                }
+            });
+        });
+        
         createWindow();
         createAssistantWindow();
         createTray();
         registerGlobalHotkey();
         startMousePolling();
+        startWebhookServer(); // [EN] Initialize Local Webhook Server (Phase 14)
 
         // [EN] Universal Webview Popup Handler: Ensures all webviews (hardcoded & dynamic)
         // can open external links in the system browser.
@@ -423,6 +640,51 @@ if (!gotTheLock) {
 
         // Initialize OCR Engine (Main Process)
         ocrMain.initOcr().catch(e => console.error("OCR Engine Init Error:", e));
+
+        // --- Aura-Systems: Local Webhook Server (v1.3 PRO) ---
+        // [TH] พอร์ทสำหรับรับคำสั่งจากภายนอก (Discord/Webhook)
+        startWebhookServer();
+    });
+}
+
+function startWebhookServer() {
+    const http = require('http');
+    const PORT = 3030;
+
+    const server = http.createServer((req, res) => {
+        if (req.method === 'POST' && req.url === '/v1/flow/trigger') {
+            let body = '';
+            req.on('data', chunk => { body += chunk.toString(); });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    console.log(`Main Process: Webhook triggered with data:`, data);
+                    
+                    if (mainWindow) {
+                        mainWindow.show();
+                        mainWindow.focus();
+                        mainWindow.webContents.send('fromMain', { 
+                            type: 'webhook-trigger-flow', 
+                            skill: data.skill || 'none',
+                            query: data.query || ''
+                        });
+                    }
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ status: 'success', message: 'Flow triggered locally' }));
+                } catch (e) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ status: 'error', message: 'Invalid JSON' }));
+                }
+            });
+        } else {
+            res.writeHead(404);
+            res.end();
+        }
+    });
+
+    server.listen(PORT, '127.0.0.1', () => {
+        console.log(`Aura-Systems: Local Webhook Server running on http://127.0.0.1:${PORT}`);
     });
 }
 

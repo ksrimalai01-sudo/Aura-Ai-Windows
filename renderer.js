@@ -173,6 +173,80 @@ function isAddonActive(id) {
     return settings.addons[id].installed && settings.addons[id].enabled;
 }
 
+// --- Aura-Flow (Autonomous Agent Engine) ---
+// [TH] คลาสหลักสำหรับคุมระบบ AI อัตโนมัติ (Aura-Flow)
+class AuraFlow {
+    constructor() {
+        this.currentSkill = null;
+        this.activeFlow = null;
+    }
+
+    async loadSkill(name) {
+        const md = await window.electronAPI.readSkill(name);
+        if (!md) return null;
+        
+        this.currentSkill = this.parseSkillMarkdown(md);
+        return this.currentSkill;
+    }
+
+    parseSkillMarkdown(md) {
+        const sections = {};
+        const yamlMatch = md.match(/^---\s*([\s\S]*?)\s*---/);
+        const yamlStr = yamlMatch ? yamlMatch[1] : '';
+        
+        // Basic YAML parser for simple fields
+        const metadata = {};
+        yamlStr.split('\n').forEach(line => {
+            const [k, v] = line.split(':').map(s => s.trim());
+            if (k && v) metadata[k] = v;
+        });
+
+        // Section extractor
+        const parts = md.split(/^#\s+/m);
+        parts.forEach(p => {
+            const lines = p.split('\n');
+            const title = lines[0].trim().toLowerCase();
+            const content = lines.slice(1).join('\n').trim();
+            if (title) sections[title] = content;
+        });
+
+        return { metadata, sections };
+    }
+
+    getSystemPrompt(agentRole = null) {
+        if (!this.currentSkill) return "You are Aura AI, a professional assistant.";
+        
+        const { metadata, sections } = this.currentSkill;
+        const isTeam = metadata.type === 'team';
+        const isWorker = metadata.type === 'worker';
+        
+        let prompt = `
+            ${sections.identity || ''}
+            # PROTOCOL
+            ${sections.protocol || sections['worker protocols'] || ''}
+            # TOOLS & CAPABILITIES
+            ${sections.tools || ''}
+        `;
+
+        if (isTeam && agentRole) {
+            prompt += `\n\nCURRENT ACTIVE ROLE: [${agentRole.toUpperCase()}]\nFocus strictly on your specific goal as defined in the ${agentRole} role.`;
+        }
+        
+        if (isWorker) {
+            prompt += `\n\nBATCH WORKER MODE: You are processing a queue. Always save progress to the results file.`;
+        }
+
+        prompt += `\n\n# WORKSPACE\nEverything you create must be saved to the sandboxed workspace.\nTo run a command, use the following format: \`RUN_CMD: [command]\`\nTo write a file, use the following format: \`WRITE_FILE: [path] | [content]\``;
+
+        return prompt.trim();
+    }
+
+    async runCommand(cmd) {
+        return await window.electronAPI.runShellCommand(cmd);
+    }
+}
+const auraFlow = new AuraFlow();
+
 function updateAddonState(id, props) {
     if (!settings.addons) settings.addons = {};
     if (!settings.addons[id]) settings.addons[id] = { installed: false, enabled: false };
@@ -411,7 +485,24 @@ async function showLookupperBubble(text, x, y) {
     });
 
     // 3. LAYER 2: Smart AI Deep Analysis
-    const prompt = `You are "Aura Assistant", a professional language tutor specializing in ${mode.toUpperCase()} context.
+    let finalPrompt = '';
+    const isFlowMode = settings.assistantMode === 'flow' && settings.activeSkill && settings.activeSkill !== 'none';
+    let teamAgents = null;
+    let isWorker = false;
+    
+    if (isFlowMode) {
+        const skill = await auraFlow.loadSkill(settings.activeSkill);
+        if (skill) {
+            if (skill.metadata.type === 'team') {
+                teamAgents = ['analyst', 'strategist', 'copywriter'];
+            } else if (skill.metadata.type === 'worker') {
+                isWorker = true;
+            } else {
+                finalPrompt = `${auraFlow.getSystemPrompt()}\n\nCONTEXT FROM SCREEN: "${text}"\nUSER REQUEST: Analyze and perform necessary actions.`;
+            }
+        }
+    } else {
+        finalPrompt = `You are "Aura Assistant", a professional language tutor specializing in ${mode.toUpperCase()} context.
 Analyze context: "${text}"
 DO NOT repeat the input. Return ONLY a structured breakdown in Thai:
 ### 🧠 Deep Analysis (${mode})
@@ -426,19 +517,86 @@ DO NOT repeat the input. Return ONLY a structured breakdown in Thai:
 ---
 VOCAB_DATA: word1|translation1|definition1, word2|translation2|definition2
 `;
+    }
 
     try {
         console.log("Renderer: Layer 2 AI call initiated...");
-        
-        let response;
+        let response = "";
         const localServerOk = await checkLocalAIConnection();
         
-        if (localServerOk) {
-            // Favor Local AI (Llama 3.2 / Phi-3)
-            response = await callAI('api', prompt);
+        if (isFlowMode && teamAgents) {
+            // --- Multi-Agent Team Execution ---
+            let teamContextCount = 0;
+            let teamContext = `USER REQUEST: Analyze the following context and perform marketing/strategy task: "${text}"\n\n`;
+            
+            for (const agent of teamAgents) {
+                teamContextCount++;
+                console.log(`AuraFlow: Agent [${agent}] is thinking...`);
+                const agentPrompt = `${auraFlow.getSystemPrompt(agent)}\n\n${teamContext}`;
+                const agentResponse = await callAI(localServerOk ? 'api' : 'gemini', agentPrompt);
+                
+                teamContext += `### 👤 Agent: ${agent.toUpperCase()}\n${agentResponse}\n\n---\n`;
+                
+                // Real-time update to the floating bubble
+                window.electronAPI.send('toMain', { 
+                    type: 'assistant-update', 
+                    html: `### 🤖 Team Collaboration (${teamContextCount}/${teamAgents.length})\n\n${teamContext}` 
+                });
+            }
+            response = teamContext;
+        } else if (isFlowMode && isWorker) {
+            // --- Aura-Worker Batch Execution ---
+            let batchContext = `### 🏭 Aura-Worker: Starting Batch Process...\n\n`;
+            
+            // [TH] ลองอ่านคิวจากไฟล์ใน Sandbox
+            let queue = [];
+            try {
+                // We use a temporary command to list tasks or read a specific file
+                // For the prototype, we assume 'text' contains the comma-separated tasks if no file exists
+                queue = text.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                if (queue.length === 0) queue = ["Task 1", "Task 2", "Task 3"]; // Fallback
+            } catch (e) {
+                queue = ["Task 1", "Task 2", "Task 3"];
+            }
+
+            let completed = 0;
+            for (const item of queue) {
+                completed++;
+                console.log(`AuraFlow: Worker processing item [${item}] (${completed}/${queue.length})...`);
+                
+                const workerPrompt = `${auraFlow.getSystemPrompt()}\n\nCURRENT ITEM: "${item}"\nGOAL: Generate ad copy and save to results.json.`;
+                const workerResponse = await callAI(localServerOk ? 'api' : 'gemini', workerPrompt);
+                
+                // Auto-save each result to the sandbox via CMD
+                await auraFlow.runCommand(`echo "${item}: ${workerResponse.replace(/"/g, "'")}" >> aura_workspace/batch_results.txt`);
+                
+                batchContext += `✅ **[${completed}/${queue.length}]**: ${item} - DONE\n`;
+                
+                window.electronAPI.send('toMain', { 
+                    type: 'assistant-update', 
+                    html: batchContext 
+                });
+            }
+            response = batchContext + `\n✨ **Batch Finished!** Results saved to \`batch_results.txt\``;
         } else {
-            // Fallback to Gemini
-            response = await callAI('gemini', prompt);
+            // Standard Single-Agent Flow
+            if (localServerOk) {
+                response = await callAI('api', finalPrompt || '');
+            } else {
+                response = await callAI('gemini', finalPrompt || '');
+            }
+        }
+        
+        // --- Aura-Flow Autonomous Command Handling ---
+        if (isFlowMode) {
+            // Handle RUN_CMD: [command]
+            const cmdMatch = response.match(/RUN_CMD:\s*(.*)/);
+            if (cmdMatch) {
+                const cmd = cmdMatch[1].trim();
+                console.log(`AuraFlow: Executing command: ${cmd}`);
+                const cmdResult = await auraFlow.runCommand(cmd);
+                response += `\n\n> ⚡ **Executed**: \`${cmd}\`\n> ${cmdResult.success ? '✅ Success' : '❌ Error'}\n\`\`\`\n${cmdResult.stdout || cmdResult.stderr}\n\`\`\``;
+            }
         }
         
         // Parse Vocab from the hidden tag
@@ -1210,6 +1368,17 @@ window.electronAPI.receive('fromMain', async (data) => {
         const isMac = window.electronAPI && window.electronAPI.isMac;
         const pasteKey = isMac ? '⌘+V' : 'Ctrl+V';
         showToast(`✅ Capture Success!\n[TH] ก๊อปรูปลง Clipboard แล้วครับ กด ${pasteKey} ที่แชทได้เลย!`);
+    } else if (data.type === 'external-trigger') {
+        // [Phase 14] Aura-Systems: Handle remote signals (Discord, Python, etc.)
+        // [TH] รับสัญญาณรีโมทจากภายนอก (Discord Bot / Script)
+        console.log("Aura-Systems: External Trigger Received:", data);
+        showToast(`📡 Remote Signal Received!\nTrigger: ${data.skillName}\nInput: ${data.input.slice(0, 40)}${data.input.length > 40 ? '...' : ''}`);
+        
+        // [EN] Switch to Local AI panel as high-visibility feedback
+        // [TH] สลับไปที่พาเนล Local AI เพื่อให้เห็นการตอบรับ
+        if (typeof toggleView === 'function') {
+            toggleView('api', true);
+        }
     }
 });
 
@@ -2050,7 +2219,9 @@ function applySettingsToUI() {
     if (chkScan) chkScan.checked = settings.scanMode || false;
     
     const chkLocal = document.getElementById('set-use-api-mode');
+    const chkLocalAddon = document.getElementById('set-use-api-mode-addon');
     if (chkLocal) chkLocal.checked = settings.useApiMode || false;
+    if (chkLocalAddon) chkLocalAddon.checked = settings.useApiMode || false;
 
     // AI Visibility (Always Tab)
     const providers = ['gemini', 'chatgpt', 'claude', 'deepseek', 'leonardo', 'bing', 'perplexity', 'grok', 'duck'];
@@ -2097,7 +2268,9 @@ function applySettingsToUI() {
     if (proUtils) proUtils.style.display = settings.useApiMode ? 'flex' : 'none';
 
     const chkApiMode = document.getElementById('set-use-api-mode');
+    const chkApiModeAddon = document.getElementById('set-use-api-mode-addon');
     if (chkApiMode) chkApiMode.checked = settings.useApiMode === true;
+    if (chkApiModeAddon) chkApiModeAddon.checked = settings.useApiMode === true;
     const txtApiKey = document.getElementById('set-openrouter-key');
     if (txtApiKey) txtApiKey.value = settings.openRouterKey || '';
 
@@ -2370,7 +2543,7 @@ async function initAuraHome() {
     } else {
         // Just check local AI health in background if already onboarded
         checkLocalAIConnection().then(hasLocal => {
-            if (hasLocal) updateLocalAIStatus();
+            if (hasLocal) refreshLocalAIStatus();
         });
     }
 }
@@ -2420,13 +2593,12 @@ async function initProOnboarding() {
 }
 
 async function checkLocalAIConnection() {
+    const endpoint = (settings.openRouterKey || "http://127.0.0.1:11434").trim().replace(/\/$/, "");
     try {
-        const endpoint = (settings.localAIEndpoint || "http://127.0.0.1:11434").trim();
-        let baseUrl = endpoint.replace(/\/v1\/chat\/completions\/?$/, '').replace(/\/$/, '');
-        if (!baseUrl.startsWith('http')) baseUrl = `http://${baseUrl}`;
-        
-        // ping the status endpoint (HEAD request is fast)
-        const res = await fetch(`${baseUrl}/api/tags`, { method: 'HEAD' }).catch(() => null);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${endpoint}/api/tags`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         return res && res.ok;
     } catch (e) {
         return false;
@@ -2640,7 +2812,9 @@ function saveSettings() {
         if (txtAlias) settings.communityAlias = txtAlias.value.trim();
 
         let chkApiMode = document.getElementById('set-use-api-mode');
-        if (chkApiMode) settings.useApiMode = chkApiMode.checked;
+        let chkApiModeAddon = document.getElementById('set-use-api-mode-addon');
+        if (chkApiModeAddon) settings.useApiMode = chkApiModeAddon.checked;
+        else if (chkApiMode) settings.useApiMode = chkApiMode.checked;
 
         const txtApiKey = document.getElementById('set-openrouter-key');
 
@@ -2869,7 +3043,7 @@ async function injectToSpecificAI(idOrWv, text) {
                 const txt = \`${finalPrompt.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\\$/g, '\\\\$')}\`;
                 if (inp.tagName === 'DIV') inp.innerText = txt;
                 else inp.value = txt;
-                
+
                 const evConf = { bubbles: true, cancelable: true };
                 inp.dispatchEvent(new Event('input', evConf));
                 inp.dispatchEvent(new Event('change', evConf));
@@ -4332,9 +4506,7 @@ async function fetchLocalAI(promptText) {
     try {
         const response = await fetch(apiUrl, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 model: selectedModel,
                 messages: apiChatHistory,
@@ -4344,58 +4516,67 @@ async function fetchLocalAI(promptText) {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error ? errorData.error.message : response.statusText;
-            throw new Error(msg || `Status ${response.status}: Connection Failed`);
+            throw new Error(errorData.error ? errorData.error.message : response.statusText);
         }
 
         const data = await response.json();
         const reply = data.choices[0].message.content;
-
         apiChatHistory.push({ role: "assistant", content: reply });
 
-        // --- WOW FACTOR: Streaming Simulation ---
-        aiContent.querySelector('.typing-dots').style.display = 'none';
-        aiTextContainer.innerHTML = "";
-        let i = 0;
-        const speed = 12; // ms
-
-        function typeEffect() {
-            if (i < reply.length) {
-                const char = reply.charAt(i);
-                aiTextContainer.innerText += char;
-                i++;
-                container.scrollTop = container.scrollHeight;
-                setTimeout(typeEffect, speed);
-            } else {
-                // Final render with basic markdown
-                let formatted = reply
-                    .replace(/\n/g, '<br>')
-                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
-                    .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1); padding:2px 4px; border-radius:4px; font-family:monospace;">$1</code>'); // code
-
-                aiTextContainer.innerHTML = formatted;
-
-                // Add Copy Button to the bubble
-                const copyBtn = document.createElement('button');
-                copyBtn.innerHTML = "📋";
-                copyBtn.title = "Copy this response";
-                copyBtn.style.cssText = "background:transparent; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:0.8rem; margin-top:8px; align-self:flex-end;";
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(reply);
-                    showToast("✅ Response copied!");
-                };
-                aiContent.appendChild(copyBtn);
-
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-        typeEffect();
+        // Rendering logic...
+        displayAIReply(reply, aiContent, aiTextContainer, container);
 
     } catch (err) {
-        aiTextContainer.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 5px 10px; border-radius: 8px; display: block;">❌ Local AI Error: ${err.message}</span>
-        <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.7;">Make sure Ollama or your Local Server is running and accessible at the URL in Settings.</p>`;
-        console.error("Local AI API Error:", err);
+        console.warn("Local AI Connection Failed. Checking for Cloud Fallback...", err);
+        
+        const hasGemini = settings.geminiKey && settings.geminiKey.length > 5;
+        if (hasGemini) {
+            aiTextContainer.innerHTML = `<span style="color: var(--accent); font-size: 0.75rem;">🛰️ Local AI Offline. Switching to Aura-Cloud...</span>`;
+            try {
+                const cloudReply = await callAI('gemini', promptText);
+                displayAIReply(cloudReply, aiContent, aiTextContainer, container);
+            } catch (cloudErr) {
+                renderAIError(`Both Local & Cloud AI failed: ${cloudErr.message}`, aiTextContainer);
+            }
+        } else {
+            renderAIError(`Local AI Error: ${err.message}. (No Cloud API Key found)`, aiTextContainer);
+        }
     }
+}
+
+function displayAIReply(reply, aiContent, aiTextContainer, container) {
+    aiContent.querySelector('.typing-dots').style.display = 'none';
+    aiTextContainer.innerHTML = "";
+    let i = 0;
+    const speed = 12;
+    function typeEffect() {
+        if (i < reply.length) {
+            aiTextContainer.innerText += reply.charAt(i++);
+            container.scrollTop = container.scrollHeight;
+            setTimeout(typeEffect, speed);
+        } else {
+            const formatted = reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            aiTextContainer.innerHTML = formatted;
+            addCopyButton(reply, aiContent);
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+    typeEffect();
+}
+
+function renderAIError(msg, container) {
+    container.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 5px 10px; border-radius: 8px; display: block;">❌ ${msg}</span>`;
+}
+
+function addCopyButton(text, container) {
+    const btn = document.createElement('button');
+    btn.innerHTML = "📋";
+    btn.style.cssText = "background:transparent; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:0.8rem; margin-top:8px; align-self:flex-end;";
+    btn.onclick = () => {
+        navigator.clipboard.writeText(text);
+        showToast("✅ Copied to clipboard!");
+    };
+    container.appendChild(btn);
 }
 
 
@@ -4550,7 +4731,10 @@ function initTabbedSettings() {
             tabPanes.forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
             const targetPane = document.getElementById(target);
-            if (targetPane) targetPane.classList.add('active');
+            if (targetPane) {
+                targetPane.classList.add('active');
+                if (target === 'tab-local-ai') refreshLocalAIStatus();
+            }
         };
     });
 
@@ -4571,6 +4755,168 @@ function initTabbedSettings() {
             localStorage.removeItem('aura_onboarding_version');
             window.location.reload();
         };
+    }
+}
+
+// ── Aura Local AI Dashboard Logic (Phase 16) ──
+async function refreshLocalAIStatus() {
+    const heartbeat = document.getElementById('ollama-heartbeat');
+    const statusText = document.getElementById('ollama-status-text');
+    const endpoint = (settings.openRouterKey || "http://127.0.0.1:11434").trim().replace(/\/$/, "");
+    
+    if (!statusText) return;
+    statusText.innerText = "🔍 Checking connection...";
+    heartbeat.classList.remove('online');
+
+    const isOnline = await checkLocalAIConnection();
+    
+    if (isOnline) {
+        try {
+            const resp = await fetch(`${endpoint}/api/tags`);
+            const data = await resp.json();
+            heartbeat.classList.add('online');
+            statusText.innerHTML = `<span style="color: #10b981; font-weight: bold;">✅ Connected to Ollama</span>`;
+            renderLocalModelCards(data.models || []);
+        } catch (err) {
+            handleOfflineState(heartbeat, statusText);
+        }
+    } else {
+        handleOfflineState(heartbeat, statusText);
+    }
+}
+
+function handleOfflineState(heartbeat, statusText) {
+    heartbeat.classList.remove('online');
+    statusText.innerHTML = `<span style="color: #ef4444;">❌ Offline: Please start Ollama</span>`;
+    renderLocalModelCards([]); // Show recommendations
+}
+
+function renderLocalModelCards(installedModels) {
+    const container = document.getElementById('local-model-list-pro');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const installedNames = installedModels.map(m => m.name.split(':')[0]);
+    
+    const recommendations = [
+        { name: 'llama3.2', desc: 'Fast & Smart (3B)', details: '<b>Pros:</b> Fast, Private, Versatile. <br><b>Cons:</b> Smaller knowledge base.', size: '~2.5GB' },
+        { name: 'mistral', desc: 'Powerful & Precise (7B)', details: '<b>Pros:</b> Very accurate, Great for coding. <br><b>Cons:</b> Heavier (4.1GB).', size: '~4.1GB' }
+    ];
+
+    recommendations.forEach(rec => {
+        const isInstalled = installedNames.includes(rec.name);
+        const card = document.createElement('div');
+        card.className = 'model-card-item';
+        card.innerHTML = `
+            <div class="model-info">
+                <strong>${rec.name.toUpperCase()}</strong>
+                <div style="font-size: 0.7rem; color: var(--text-muted);">${rec.desc} | Size: ${rec.size}</div>
+                <div class="model-pros-cons" style="margin-top:8px; font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top:8px;">
+                    ${rec.details}
+                </div>
+            </div>
+            <div class="model-actions">
+                ${isInstalled 
+                    ? `<button class="wizard-btn-sm btn-delete-model" onclick="manageModel('delete', '${rec.name}')">🗑️ Delete</button>` 
+                    : `<button class="wizard-btn-sm" onclick="manageModel('pull', '${rec.name}')">📥 Install</button>`}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function manageModel(action, name) {
+    const endpoint = (settings.openRouterKey || "http://127.0.0.1:11434").trim().replace(/\/$/, "");
+    showToast(`⏳ ${action === 'pull' ? 'Installing' : 'Deleting'} ${name}...`);
+    
+    try {
+        const resp = await fetch(`${endpoint}/api/${action}`, {
+            method: 'POST',
+            body: JSON.stringify({ name: name })
+        });
+        
+        if (resp.ok) {
+            showToast(`✅ Success: ${name} ${action === 'pull' ? 'installed' : 'deleted'}.`);
+            setTimeout(refreshLocalAIStatus, 2000);
+        } else {
+            throw new Error(`Ollama ${action} failed.`);
+        }
+    } catch (err) {
+        showToast(`❌ Error: ${err.message}`);
+    }
+}
+// Expose to window for inline onclick handlers (index.html)
+window.refreshLocalAIStatus = refreshLocalAIStatus;
+window.checkLocalAIConnection = checkLocalAIConnection; // Legacy alias
+window.manageModel = manageModel;
+window.installOllamaEngine = installOllamaEngine;
+
+async function installOllamaEngine() {
+    const btn = document.getElementById('btn-download-ollama-pro');
+    const progressContainer = document.getElementById('ollama-download-container');
+    const progressFill = document.getElementById('ollama-progress-bar');
+    const progressPercent = document.getElementById('download-percent-label');
+    const statusLabel = document.getElementById('download-status-label');
+
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    btn.innerText = "⏳ Initializing Download...";
+    
+    if (progressContainer) progressContainer.style.display = 'block';
+
+    const isMac = window.electronAPI && window.electronAPI.isMac;
+    const downloadUrl = isMac 
+        ? "https://ollama.com/download/Ollama-darwin.zip" 
+        : "https://ollama.com/download/OllamaSetup.exe";
+
+    try {
+        // [TH] ใช้ระบบ Download Engine ใหม่ที่ผมเพิ่งอัปเกรดให้ครับ มี Progress Bar วิ่งในแอปเลย!
+        // [EN] Trigger the new Integrated Downloader with real-time UI updates.
+        
+        const progressHandler = (data) => {
+            if (data.type === 'download-progress') {
+                const p = data.percent;
+                if (progressFill) progressFill.style.width = `${p}%`;
+                if (progressPercent) progressPercent.innerText = `${p}%`;
+                if (statusLabel) statusLabel.innerText = p < 100 ? `⏳ Downloading... (${(data.received / 1024 / 1024 || 0).toFixed(1)}MB)` : "✅ Finished!";
+                btn.innerText = `⏳ Download: ${p}%`;
+                
+                if (p === 100) {
+                     btn.innerText = "⚡ Installer Opened";
+                     btn.style.background = "#06b6d4"; 
+                     
+                     // [TH] เมื่อติดตั้งเสร็จ ให้เปิดโหมด Local AI ให้อัตโนมัติเลยครับ
+                     updateAddonState('localAI', { installed: true, enabled: true });
+                     settings.useApiMode = true;
+                     saveSettings(); // Save to localStorage & Cloud
+                     
+                     showToast("🏠 Local AI Enabled! After installer finishes, you can start chatting.");
+                }
+            } else if (data.type === 'download-error') {
+                showToast("❌ Download Failed: " + data.message);
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.innerText = "🚀 1-Click Install Ollama";
+                if (progressContainer) progressContainer.style.display = 'none';
+            }
+        };
+
+        window.electronAPI.receive('fromMain', progressHandler);
+
+        // [BUG FIX] เรียกใช้ API ตามที่ระบุใน preload.js (invoke แทน send)
+        const result = await window.electronAPI.downloadEngine(downloadUrl);
+        // Note: download-engine returns a promise that resolves when download FINISHES
+        
+        showToast("✅ Download Complete! Opening installer...");
+    } catch (err) {
+        showToast("❌ Download Failed: " + err.message);
+        console.error(err);
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.innerText = "🚀 1-Click Install Ollama";
+        if (progressContainer) progressContainer.style.display = 'none';
     }
 }
 

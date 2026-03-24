@@ -216,10 +216,10 @@
 
                 <div class="dash-grid">
                     <div class="dash-card"
-                        onclick="toggleView('api', true); applyProviderChange('api');">
+                        onclick="toggleView('api', true); document.getElementById('ai-provider').value='api';">
                         <i>🏠</i>
-                        <h3>Aura Local AI</h3>
-                        <p>Connect to Ollama, LM Studio, or any OpenAI-compatible Local Server.</p>
+                        <h3>Aura Local AI (Pro)</h3>
+                        <p>คุยกับ AI ในเครื่องคุณเอง (Ollama) แบบส่วนตัว 100% และไม่มีขีดจำกัด</p>
                     </div>
                     <div class="dash-card" onclick="document.getElementById('btn-trigger-lookupper').click();">
                         <i>🔍</i>
@@ -606,9 +606,10 @@
                 </div>
                 <button id="btn-close-settings" class="close-overlay">✕</button>
             </div>
-
             <div class="settings-tabs-nav">
                 <button class="tab-btn active" data-tab="tab-always">Always</button>
+                <button class="tab-btn" data-tab="tab-local-ai">🏠 Local AI</button>
+                <button class="tab-btn" data-tab="tab-ai-guide">📖 AI Guide</button>
                 <button class="tab-btn" data-tab="tab-prompts">Prompts</button>
                 <button class="tab-btn" data-tab="tab-tags">Tags</button>
                 <button class="tab-btn" data-tab="tab-shortcuts">Shortcuts</button>
@@ -622,6 +623,108 @@
 
             <div class="settings-tab-content">
                 <!-- Always Tab -->
+                <!-- Tab Local AI -->
+                <div id="tab-local-ai" class="tab-pane">
+                    <div class="local-ai-dashboard">
+                        <div class="dashboard-header-pro">
+                            <div class="status-heartbeat pulsing" id="ollama-heartbeat"></div>
+                            <h2>Aura-Local (Ollama Hub)</h2>
+                            <p>จัดการ AI ในเครื่องคุณเองแบบส่วนตัว 100%</p>
+                        </div>
+                        
+                        <div class="wizard-stepper">
+                            <div class="wizard-step" id="step-connect">
+                                <div class="step-num">1</div>
+                                <h3>เชื่อมต่อ Ollama</h3>
+                                <div id="ollama-status-text">กำลังตรวจสอบสถานะ...</div>
+                                <button id="btn-reconnect-ollama" class="wizard-btn-sm" onclick="refreshLocalAIStatus();">🔄 ตรวจสอบใหม่</button>
+                                <button id="btn-download-ollama-pro" class="wizard-btn-sm" style="background: var(--accent); color: white; margin-top: 8px; width: 100%; transition: all 0.3s;" onclick="installOllamaEngine();">🚀 1-Click Install Ollama</button>
+                                
+                                <!-- Progress Container Phase 20 -->
+                                <div id="ollama-download-container" style="margin-top: 10px; display: none;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 4px;">
+                                        <span id="download-status-label" style="color: var(--accent);">⏳ Downloading...</span>
+                                        <span id="download-percent-label" style="color: white; font-weight: bold;">0%</span>
+                                    </div>
+                                    <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                        <div id="ollama-progress-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 0 10px var(--accent);"></div>
+                                    </div>
+                                </div>
+                                
+                                <div id="install-progress-text" style="font-size: 0.7rem; color: var(--accent); margin-top: 5px; display: none;">⏳ กำลังเตรียมตัวติดตั้ง...</div>
+                            </div>
+                            
+                            <div class="wizard-step" id="step-model">
+                                <div class="step-num">2</div>
+                                <h3>เลือก AI Model</h3>
+                                <p>เลือกตัวที่เหมาะกับสเปกเครื่องคุณ</p>
+                                <div id="local-model-list-pro" class="model-cards">
+                                    <!-- Dynamic Cards -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="guide-footer-pro">
+                            <p>💡 **Tip**: Llama 3.2 (3B) คือตัวที่แนะนำที่สุดสำหรับคอมพิวเตอร์ทั่วไป (เร็วและฉลาด)</p>
+                        </div>
+
+                        <div class="local-ai-advanced-settings" style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                            <h4 style="margin: 0 0 12px 0; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">⚙️ Advanced Settings</h4>
+                            <label class="pro-check"><input type="checkbox" id="set-use-api-mode"> Enable Local AI Mode (Aura Pro)</label>
+                            <label class="pro-check"><input type="checkbox" id="set-scan-mode"> Enable Scan Mode (Auto-Hover Translate)</label>
+                            
+                            <div class="input-row" style="margin-top: 12px;">
+                                <span style="font-size: 0.75rem; opacity: 0.7;">Endpoint URL:</span>
+                                <div style="display: flex; gap: 5px; flex: 1;">
+                                    <input type="text" id="set-openrouter-key" placeholder="http://127.0.0.1:11434" readonly style="background: rgba(0,0,0,0.2); cursor: not-allowed; opacity: 0.8; font-family: monospace; font-size: 0.8rem;">
+                                    <button type="button" id="btn-edit-endpoint" class="icon-only-btn" style="padding: 4px 8px;" title="Edit Endpoint">✏️</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab AI Comparison Guide -->
+                <div id="tab-ai-guide" class="tab-pane">
+                    <div class="ai-guide-container">
+                        <h2>Aura AI Selection Guide</h2>
+                        <p>ควรเลือก AI ตัวไหนสำหรับงานของคุณ?</p>
+                        <div class="comparison-matrix">
+                            <table class="pro-matrix">
+                                <thead>
+                                    <tr>
+                                        <th>Feature</th>
+                                        <th class="col-local">🏠 Local AI</th>
+                                        <th class="col-cloud">☁️ Cloud (Gemini/GPT)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>🛡️ ความเป็นส่วนตัว</td>
+                                        <td>สูงสุด (ไม่ส่งข้อมูลออกนอกเครื่อง)</td>
+                                        <td>ปานกลาง (ส่งข้อมูลขึ้น Cloud)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>🚀 ความเร็ว</td>
+                                        <td>ขึ้นอยู่กับสเปกคอมคุณ</td>
+                                        <td>ขึ้นอยู่กับความเร็วอินเทอร์เน็ต</td>
+                                    </tr>
+                                    <tr>
+                                        <td>🧠 ความรอบรู้</td>
+                                        <td>ดี (สำหรับโมเดล 8B ขึ้นไป)</td>
+                                        <td>สูงสุด (ฐานความมหาศาล)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>💰 ค่าใช้จ่าย</td>
+                                        <td>ฟรีตลอดกาล</td>
+                                        <td>มีโควต้าจำกัด / เสียเงิน (API)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="tab-always" class="tab-pane active">
                     <div class="settings-group">
                         <h3>[ AI Selection ] <span class="help-hint">?</span></h3>
@@ -647,28 +750,6 @@
                         </div>
                     </div>
 
-                    <div class="settings-group">
-                        <h3>[ Local AI Server ] <span class="help-hint" title="Use a local AI engine like Ollama to run models entirely on your machine.">?</span></h3>
-                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.75rem; color: rgba(255,255,255,0.85); line-height: 1.4;">
-                            <strong style="color: white;">🏡 100% Free & Private AI</strong><br><br>
-                            <span style="color: #10b981; font-weight: bold;">• Requirements:</span> You must install <a href="https://ollama.com/" target="_blank" style="color: #38bdf8; text-decoration: none;">Ollama</a> or <a href="https://lmstudio.ai/" target="_blank" style="color: #38bdf8; text-decoration: none;">LM Studio</a>.<br>
-                            <span style="color: #94a3b8; font-weight: bold;">• Endpoint:</span> Ollama (Port 11434) / LM Studio (Port 1234).<br><br>
-                            
-                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
-                                <button type="button" id="btn-settings-install-ai" class="save-btn" style="flex: 1; padding: 6px; font-size: 0.7rem; background: #10b981; border: none; font-weight: 700;">🚀 Install AI (Llama 3.2)</button>
-                                <button type="button" id="btn-settings-check-local" class="save-btn" style="flex: 0.5; padding: 6px; font-size: 0.7rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);">🔍 Check Status</button>
-                            </div>
-                        </div>
-                        <label class="pro-check"><input type="checkbox" id="set-use-api-mode"> Enable Local AI Mode</label>
-                        <label class="pro-check"><input type="checkbox" id="set-scan-mode"> Enable Scan Mode (Auto-Hover Translate)</label>
-                        <div class="input-row" style="position: relative;">
-                            <span>Endpoint URL</span>
-                            <div style="display: flex; gap: 5px; flex: 1;">
-                                <input type="text" id="set-openrouter-key" placeholder="http://127.0.0.1:11434" readonly style="background: rgba(0,0,0,0.2); cursor: not-allowed; opacity: 0.8;">
-                                <button type="button" id="btn-edit-endpoint" class="icon-only-btn" style="padding: 5px 8px; font-size: 0.75rem;" title="Edit Endpoint (Advanced Users Only)">✏️</button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Prompts Tab -->
@@ -902,6 +983,7 @@
                             <label class="pro-check"><input type="checkbox" id="set-show-ecommerce"> E-commerce Pro</label>
                             <label class="pro-check"><input type="checkbox" id="set-show-japanese"> Japanese Tutor</label>
                             <label class="pro-check"><input type="checkbox" id="set-show-graphic-design"> Graphic Design Pro</label>
+                            <label class="pro-check" style="color: #10b981;"><input type="checkbox" id="set-use-api-mode-addon"> 🏠 Aura Local AI (Pro)</label>
                         </div>
                     </div>
 

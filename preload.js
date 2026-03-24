@@ -22,6 +22,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     recognizeText: (dataUrl) => ipcRenderer.invoke('recognize-text', dataUrl),
+    
+    // Aura-Flow (Autonomous Engine)
+    listSkills: () => ipcRenderer.invoke('list-skills'),
+    readSkill: (name) => ipcRenderer.invoke('read-skill', name),
+    runShellCommand: (cmd) => ipcRenderer.invoke('run-shell-command', cmd),
+    openExternal: (url) => ipcRenderer.send('toMain', { type: 'open-url', url: url }),
+    downloadEngine: (url) => ipcRenderer.invoke('download-engine', url),
+
     platform: process.platform,
     isMac: process.platform === 'darwin'
 });
